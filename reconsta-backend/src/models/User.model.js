@@ -16,7 +16,7 @@ const userSchema = mongoose.Schema({
     password:{
         type : String,
         required : true,
-        select : false // it will not be retured to the database query
+        select : false // it will not be returned to the database query
     },
     role:{
         type : String,
