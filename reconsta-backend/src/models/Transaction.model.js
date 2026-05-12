@@ -45,7 +45,7 @@ const transactionSchema = mongoose.Schema({
      ex - 
         bank_12_may.csv
         pos_12_may.csv
-        - To campare the uploaded batch of the bank transaction with the batch same of POS transactions
+        - To compare the uploaded batch of the bank transaction with the batch same of POS transactions
         - sirf isi upload batch ke bank transactions ko isi batch ke POS transactions se compare karna hai.
         sessionId : "EC_2026_05_12_001"
 
