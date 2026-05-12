@@ -61,7 +61,7 @@ const anomalySchema = mongoose.Schema({
     }
 }, { timestamps : true })
 
-// dont't use arrow function here because we can't use 'this' (for the reference) in arrow function
+// don't use arrow function here because we can't use 'this' (for the reference) in arrow function
 anomalySchema.pre('validate',function(next){
     if(!this.bankTxnId && !this.posTxnId){
         return next(new Error("Atleast one transaction reference is required"))
