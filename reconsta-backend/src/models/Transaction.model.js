@@ -52,8 +52,7 @@ const transactionSchema = mongoose.Schema({
     */
     sessionId : {
         type : String,
-        required : true,
-        index : true
+        required : true
     },
     matchedWith : {
         type : mongoose.Schema.Types.ObjectId,
