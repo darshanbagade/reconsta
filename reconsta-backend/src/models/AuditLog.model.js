@@ -20,13 +20,13 @@ const auditLogSchema = mongoose.Schema({
     // Old data before the action
     previousValue: {
         type: mongoose.Schema.Types.Mixed, // Mixed -> flexible object can be added
-        default: {}
+        default: () => ({})
     },
 
     // New data after the action
     newValue: {
         type: mongoose.Schema.Types.Mixed,
-        default: {}
+        default: () => ({})
     },
 
     timestamp : {
