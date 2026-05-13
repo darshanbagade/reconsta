@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import { env } from './config/env.js';
+import errorHandler from './middleware/errorHandler.js';
+
 const app = express();
 
 app.use(
@@ -23,5 +25,8 @@ app.get('/health',(req,res)=>{
         message:'Reconsta API is running'
     })
 })
+
+// errorHandler will be called if an error occurs in routes/controllers/middleware
+app.use(errorHandler);
 
 export default app;
