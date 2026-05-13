@@ -2,6 +2,8 @@ import express from 'express'
 import cors from 'cors'
 import { env } from './config/env.js';
 import errorHandler from './middleware/errorHandler.js';
+import cookieParser from 'cookie-parser'
+import authRouter from './routes/auth.routes.js';
 
 const app = express();
 
@@ -19,12 +21,17 @@ app.use(express.json())
 // extended - allows to parse complex form data
 app.use(express.urlencoded({ extended : true }))
 
+app.use(cookieParser())
+
 app.get('/health',(req,res)=>{
     res.json({
         success:true,
         message:'Reconsta API is running'
     })
 })
+
+
+app.use('/api/auth',authRouter)
 
 // errorHandler will be called if an error occurs in routes/controllers/middleware
 app.use(errorHandler);
