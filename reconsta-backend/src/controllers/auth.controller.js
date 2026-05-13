@@ -7,6 +7,13 @@ import jwt from 'jsonwebtoken'
 
 const register = async (req, res, next) => {
     try {
+
+        const userRole = req.user.role;
+        //Account registartion can be only done, when role == 'admin'
+        if (!req.user || req.user.role !== 'admin') {
+            throw new ApiError(403, 'You are not authorized to register accounts')
+        }
+
         const { name, email, password, role } = req.body
 
         const missingFields = [name, email, password].some(

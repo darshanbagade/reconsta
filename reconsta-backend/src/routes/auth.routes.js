@@ -4,7 +4,7 @@ import verifyJWT from '../middleware/auth.middleware.js';
 
 const authRouter = Router();
 
-authRouter.post('/register',register)
+authRouter.post('/register',verifyJWT, register)
 authRouter.post('/login',login)
 authRouter.get('/me', verifyJWT, getMe)
 authRouter.post('/logout',verifyJWT, logout)
