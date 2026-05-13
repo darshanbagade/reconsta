@@ -168,6 +168,46 @@ const getMe = async (req, res, next) =>{
     }
 }
 
+const refreshAccessToken = async (req, res, next) => {
+    try {
+        const incomingRefreshToken = req.cookies?.refreshToken
+
+        if (!incomingRefreshToken) {
+            throw new ApiError(401, 'Refresh token missing')
+        }
+
+        const decodedToken = jwt.verify(incomingRefreshToken, env.JWT_REFRESH_SECRET)
+
+        const user = await User.findById(decodedToken.id).select('+refreshToken')
+
+        if (!user || !user.isActive) {
+            throw new ApiError(401, 'Invalid refresh token')
+        }
+
+        if (incomingRefreshToken !== user.refreshToken) {
+            throw new ApiError(401, 'Refresh token expired or reused')
+        }
+
+        const accessToken = generateAccessToken(user)
+
+        const options = {
+            httpOnly: true,
+            secure: env.NODE_ENV === 'production'
+        }
+
+        res.cookie('accessToken', accessToken, options)
+
+        return sendSuccess(res, 200, 'Access token refreshed successfully', {
+            accessToken
+        })
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return next(new ApiError(401, 'Invalid or expired refresh token'))
+        }
+
+        next(error)
+    }
+}
 
 const logout = async (req, res, next) => {
     try {
@@ -198,5 +238,6 @@ export {
     register,
     login,
     getMe,
-    logout
+    logout,
+    refreshAccessToken
 }
