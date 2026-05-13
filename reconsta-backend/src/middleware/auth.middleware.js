@@ -10,7 +10,19 @@ const verifyJWT = async (req, res, next) =>{
             throw new ApiError(401, "Unauthorized request")
         }
 
-        const decodedToken = jwt.verify(token, env.JWT_ACCESS_SECRET)
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(token, env.JWT_ACCESS_SECRET)
+        } catch (error) {
+            if (
+                error?.name === 'JsonWebTokenError' ||
+                error?.name === 'TokenExpiredError' ||
+                error?.name === 'NotBeforeError'
+            ) {
+                throw new ApiError(401, 'Invalid Access Token')
+            }
+            throw error
+        }
 
         const user = await User.findById(decodedToken?.id)
 
