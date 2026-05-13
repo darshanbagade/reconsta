@@ -18,6 +18,11 @@ const userSchema = mongoose.Schema({
         required : true,
         select : false // it will not be returned to the database query
     },
+    refreshToken: {
+        type: String,
+        select: false,
+        default: null
+    },
     role:{
         type : String,
         enum : ["analyst","supervisor","admin"],
@@ -28,7 +33,7 @@ const userSchema = mongoose.Schema({
         type : Boolean,
         default:true
     }
-}, {timestamps = true})
+}, {timestamps : true})
 
 const User = mongoose.model('User', userSchema);
 export default User
