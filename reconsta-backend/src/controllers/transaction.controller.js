@@ -32,7 +32,13 @@ const validateCsvRows = (rows, source) =>{
 // take the CSV rows and and convert to the JSON objects
 const normalizeRows = (rows, source, sessionId) =>{
     return rows.map((row) =>{
-        const amountInPaise = Math.round( Number( row.amount ) * 100 )
+        const rawAmount = typeof row.amount === 'string' ? row.amount.trim() : ''
+
+        if(rawAmount === ''){
+            throw new ApiError(400, `${source} CSV has invlid amount of transactionId ${row.txnId}`)
+        }
+
+        const amountInPaise = Math.round( Number(rawAmount) * 100 )
         const parsedTimestamp = new Date(row.timestamp)
 
         if(Number.isNaN(amountInPaise)){
