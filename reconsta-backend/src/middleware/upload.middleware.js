@@ -13,7 +13,7 @@ const fileFilter = (req, file, cb) =>{
     if(file.mimetype === 'text/csv' || file.originalname.endsWith('.csv') ){
         cb(null, true)
     }else{
-        cb(new ApiError(400, 'Only CSV fiels are allowed'), false);
+        cb(new ApiError(400, 'Only CSV files are allowed'), false);
     }
 }
 
