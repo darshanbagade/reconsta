@@ -8,13 +8,14 @@ import jwt from 'jsonwebtoken'
 const register = async (req, res, next) => {
     try {
 
-        const userRole = req.user.role;
-        //Account registartion can be only done, when role == 'admin'
-        if (!req.user || req.user.role !== 'admin') {
-            throw new ApiError(403, 'You are not authorized to register accounts')
+        const { name, email, password, role } = req.body
+        
+        const allowedRoles = ['admin', 'supervisor', 'analyst']
+
+        if (role && !allowedRoles.includes(role)) {
+            throw new ApiError(400, 'Invalid user role')
         }
 
-        const { name, email, password, role } = req.body
 
         const missingFields = [name, email, password].some(
             (field) => typeof field !== 'string' || field.trim() === ''
@@ -47,7 +48,9 @@ const register = async (req, res, next) => {
             isActive: user.isActive
         }
 
-        return sendSuccess(res, 201, 'User registered successfully', safeUser)
+        return sendSuccess(res, 201, 'User registered successfully', {
+            user: safeUser
+        })
     } catch (error) {
         next(error)
     }
@@ -135,8 +138,7 @@ const login = async (req, res, next) => {
 
         
         return sendSuccess(res, 200, 'User logged in successfully',{
-            user : safeUser,
-            accessToken
+            user : safeUser
         })
 
         
@@ -162,7 +164,9 @@ const getMe = async (req, res, next) =>{
             isActive: user.isActive
         }
 
-        return sendSuccess(res, 200, 'User data fetched successfully', safeUser)
+        return sendSuccess(res, 200, 'User data fetched successfully', {
+            user: safeUser
+        })
     } catch (error) {
         next(error)
     }
