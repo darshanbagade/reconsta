@@ -16,9 +16,11 @@ export const env = {
     JWT_REFRESH_SECRET : process.env.JWT_REFRESH_SECRET,
     JWT_REFRESH_EXPIRE : process.env.JWT_REFRESH_EXPIRE,
 
-    JWT_EXPIRE : process.env.JWT_EXPIRE,
     GEMINI_API_KEY : process.env.GEMINI_API_KEY,
     NODE_ENV : process.env.NODE_ENV || 'development',
-    CLIENT_URL : process.env.CLIENT_URL || 'http://localhost:5173'
+    CLIENT_URL : process.env.CLIENT_URL || 'http://localhost:5173',
 
+    SEED_ADMIN_NAME: process.env.SEED_ADMIN_NAME,
+    SEED_ADMIN_EMAIL: process.env.SEED_ADMIN_EMAIL,
+    SEED_ADMIN_PASSWORD: process.env.SEED_ADMIN_PASSWORD
 }
