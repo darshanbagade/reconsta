@@ -1,6 +1,6 @@
 import ApiError from '../utils/ApiError.js'
 
-//some operations will performed with admin/supervisor access
+// Restricts access to routes based on the allowed user roles.
 const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
