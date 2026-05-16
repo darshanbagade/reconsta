@@ -3,6 +3,7 @@ import parseCsvBuffer from '../utils/csvParser.js'
 import sendSuccess from '../utils/responseFormatter.js'
 import ApiError from '../utils/ApiError.js'
 import { randomUUID } from 'node:crypto'
+import mongoose from 'mongoose'
 
 const REQUIRED_COLUMNS = ['txnId', 'merchantId', 'merchantName', 'amount', 'timestamp']
 
@@ -42,7 +43,7 @@ const normalizeRows = (rows, source, sessionId) =>{
         const parsedTimestamp = new Date(row.timestamp)
 
         if(Number.isNaN(amountInPaise)){
-            throw new ApiError(400, `${source} CSV has invlid amount of transactionId ${row.txnId}`)
+            throw new ApiError(400, `${source} CSV has invalid amount of transactionId ${row.txnId}`)
         }
 
         if(Number.isNaN(parsedTimestamp.getTime())){
@@ -92,8 +93,20 @@ const uploadTransaction = async ( req, res, next ) =>{
 
         const transactions = [...bankTransactions, ...posTransactions]
 
-        await Transaction.insertMany(transactions)
-
+        //Atomicity Property -> All the transactions will done or nothing will be done 
+        //All records will save o r zero records will save
+        // Partial record safe nhi honge
+        const mongoSession = await mongoose.startSession()
+       try {
+            await mongoSession.withTransaction(async () => {
+                await Transaction.insertMany(transactions, {
+                    session: mongoSession
+                })
+            })
+        } finally {
+            await mongoSession.endSession()
+        }
+    
         return sendSuccess(res, 201, 'Transactions uploaded successfully', {
             sessionId,
             totalTransactions: transactions.length,
