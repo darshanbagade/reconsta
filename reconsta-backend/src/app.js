@@ -4,7 +4,7 @@ import { env } from './config/env.js';
 import errorHandler from './middleware/errorHandler.js';
 import cookieParser from 'cookie-parser'
 import authRouter from './routes/auth.routes.js';
-
+import transactionRouter from './routes/transaction.routes.js';
 const app = express();
 
 app.use(
@@ -31,7 +31,8 @@ app.get('/health',(req,res)=>{
 })
 
 
-app.use('/api/auth',authRouter)
+app.use('/api/auth', authRouter)
+app.use('/api/transactions', transactionRouter)
 
 // errorHandler will be called if an error occurs in routes/controllers/middleware
 app.use(errorHandler);
