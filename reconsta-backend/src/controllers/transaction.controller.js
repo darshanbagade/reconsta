@@ -125,12 +125,205 @@ const uploadTransaction = async ( req, res, next ) =>{
 
 
 
+//for thousands of transations we are using filter + pagination
 const getTransactions = async (req, res, next) => {
+    try{
 
+        const {
+            sessionId,
+            source,
+            status,
+            page = 1,
+            limit = 20
+        } = req.query
+
+
+        const filter = { }
+        if (sessionId) filter.sessionId = sessionId
+        if (source)  filter.source = source
+        if (status) filter.status = status
+
+        const pageNumber = Number(page)
+        const limitNumber = Number(limit)
+
+        if (
+            Number.isNaN(pageNumber) ||
+            Number.isNaN(limitNumber) ||
+            pageNumber < 1 ||
+            limitNumber < 1
+        ) {
+            throw new ApiError(400, 'Page and limit must be valid positive numbers')
+        }
+
+        const skip = (pageNumber - 1) * limitNumber
+
+        const transactions = await Transaction.find(filter)
+            .sort({timestamp:-1})
+            .skip(skip)
+            .limit(limitNumber)
+
+
+        const totalTransactions = await Transaction.countDocuments(filter)
+
+        return sendSuccess(res, 200, "Transactions fetched successfully", {
+            transactions,
+            pagination:{
+                totalTransactions,
+                currentPage : pageNumber,
+                totalPages : Math.ceil(totalTransactions/limitNumber),
+                limit: limitNumber
+            }
+        })
+
+    }catch(error){
+        next(error)
+    }
 } 
 
 
+const getTransactionById  = async (req, res, next) =>{
+    try {
+        const {id} = req.params
+
+        const transaction = await Transaction.findById(id)
+       
+        if(!transaction){
+            throw new ApiError(404, 'Transaction not found')
+        }
+
+        return sendSuccess(res, 200, 'Transaction fetched successfully', {
+            transaction
+        } )
+    } catch (error) {
+        next(error)
+    }
+}
+
+//gives all sessions list
+const getTransactionSessions = async (req, res, next) => {
+    try {
+        const sessions = await Transaction.aggregate([
+            {
+                $group: {
+                    _id: '$sessionId',
+                    totalTransactions: { $sum: 1 },
+                    bankTransactions: {
+                        $sum: {
+                            $cond: [{ $eq: ['$source', 'bank'] }, 1, 0]
+                        }
+                    },
+                    posTransactions: {
+                        $sum: {
+                            $cond: [{ $eq: ['$source', 'pos'] }, 1, 0]
+                        }
+                    },
+                    uploadedAt: { $max: '$createdAt' }
+                }
+            },
+            {
+                $sort: {
+                    uploadedAt: -1
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    sessionId: '$_id',
+                    totalTransactions: 1,
+                    bankTransactions: 1,
+                    posTransactions: 1,
+                    uploadedAt: 1
+                }
+            }
+        ])
+
+        return sendSuccess(res, 200, 'Transaction sessions fetched successfully', {
+            sessions
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+//gives summary of transactions in particular session
+const getSessionSummary = async (req, res, next) => {
+    try {
+        const { sessionId } = req.params
+        console.log('Requested sessionId:', sessionId)
+        const summary = await Transaction.aggregate([
+            {
+                $match: {
+                    sessionId
+                }
+            },
+            {
+                $group: {
+                    _id: '$sessionId',
+                    totalTransactions: { $sum: 1 },
+                    bankTransactions: {
+                        $sum: {
+                            $cond: [{ $eq: ['$source', 'bank'] }, 1, 0]
+                        }
+                    },
+                    posTransactions: {
+                        $sum: {
+                            $cond: [{ $eq: ['$source', 'pos'] }, 1, 0]
+                        }
+                    },
+                    unprocessed: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'unprocessed'] }, 1, 0]
+                        }
+                    },
+                    matched: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'matched'] }, 1, 0]
+                        }
+                    },
+                    fuzzy: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'fuzzy'] }, 1, 0]
+                        }
+                    },
+                    unmatched: {
+                        $sum: {
+                            $cond: [{ $eq: ['$status', 'unmatched'] }, 1, 0]
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    sessionId: '$_id',
+                    totalTransactions: 1,
+                    bankTransactions: 1,
+                    posTransactions: 1,
+                    unprocessed: 1,
+                    matched: 1,
+                    fuzzy: 1,
+                    unmatched: 1
+                }
+            }
+        ])
+        console.log('Summary result:', summary)
+
+        if (!summary.length) {
+            throw new ApiError(404, 'Session not found')
+        }
+
+        return sendSuccess(res, 200, 'Session summary fetched successfully', {
+            summary: summary[0]
+        })
+    } catch (error) {
+        next(error)
+    }
+}
 
 export {
-    uploadTransaction
+    uploadTransaction,
+    getTransactions,
+    getTransactionById,
+    getTransactionSessions,
+    getSessionSummary
 }
