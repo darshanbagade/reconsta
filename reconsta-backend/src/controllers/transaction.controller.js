@@ -125,7 +125,7 @@ const uploadTransaction = async ( req, res, next ) =>{
 
 
 
-//for thousands of transations we are using filter + pagination
+//for thousands of transactions we are using filter + pagination
 const getTransactions = async (req, res, next) => {
     try{
 
