@@ -84,7 +84,7 @@ const updateAnomalyStatus = async (req, res, next) => {
         const { id } = req.params
         const { status } = req.body
 
-        const allowedStatuses = ['open', 'in_review', 'resolved']
+        const allowedStatuses = Anomaly.schema.path('status').enumValues
 
         if (!status || !allowedStatuses.includes(status)) {
             throw new ApiError(400, 'Invalid anomaly status')
