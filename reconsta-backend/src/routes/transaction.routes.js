@@ -1,6 +1,12 @@
 import { Router } from "express";
 import verifyJWT from "../middleware/auth.middleware.js";
-import { uploadTransaction } from "../controllers/transaction.controller.js";
+import { 
+    uploadTransaction,
+    getTransactions,
+    getTransactionById,
+    getTransactionSessions,
+    getSessionSummary
+} from "../controllers/transaction.controller.js";
 import upload from "../middleware/upload.middleware.js";
 const transactionRouter = Router()
 
@@ -15,5 +21,20 @@ transactionRouter.post(
     ]),
     uploadTransaction 
 )
+
+
+// Get the transaction list with filtering and pagination
+transactionRouter.get('/', verifyJWT, getTransactions)
+
+// Get transaction sessions for a particular batch
+transactionRouter.get('/sessions', verifyJWT, getTransactionSessions );
+
+// Get summary for a particular session
+transactionRouter.get('/session/:sessionId/summary', verifyJWT, getSessionSummary);
+
+// single transaction details
+transactionRouter.get('/:id', verifyJWT, getTransactionById)
+
+
 
 export default transactionRouter;
