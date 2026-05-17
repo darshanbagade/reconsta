@@ -23,13 +23,13 @@ transactionRouter.post(
 )
 
 
-//give all the transaction list  + filter pagination
+// Get the transaction list with filtering and pagination
 transactionRouter.get('/', verifyJWT, getTransactions)
 
-//transations of particular batch
+// Get transaction sessions for a particular batch
 transactionRouter.get('/sessions', verifyJWT, getTransactionSessions );
 
-//get summary of single transaction
+// Get summary for a particular session
 transactionRouter.get('/session/:sessionId/summary', verifyJWT, getSessionSummary);
 
 // single transaction details
