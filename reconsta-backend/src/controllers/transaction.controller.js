@@ -165,7 +165,7 @@ const getTransactions = async (req, res, next) => {
 
         const totalTransactions = await Transaction.countDocuments(filter)
 
-        return sendSuccess(res, 200, "Transactions fetched successfully", {
+        return sendSuccess(res, 200, 'Transactions fetched successfully', {
             transactions,
             pagination:{
                 totalTransactions,
