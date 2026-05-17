@@ -47,7 +47,7 @@ const getAnomalies = async (req, res, next) => {
             pagination :{
                 totalAnomalies,
                 currentPage : pageNumber,
-                totalPage : Math.ceil(totalAnomalies/limitNumber),
+                totalPages : Math.ceil(totalAnomalies/limitNumber),
                 limit: limitNumber
             }
         })
