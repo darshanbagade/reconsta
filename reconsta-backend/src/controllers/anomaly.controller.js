@@ -22,12 +22,14 @@ const getAnomalies = async (req, res, next) => {
         const limitNumber = Number(limit)
 
         if(
-            Number.isNaN(pageNumber) ||
-            Number.isNaN(limitNumber) ||
+            !Number.isFinite(pageNumber) ||
+            !Number.isFinite(limitNumber) ||
+            !Number.isInteger(pageNumber) ||
+            !Number.isInteger(limitNumber) ||
             pageNumber < 1 ||
             limitNumber < 1
         ){
-            throw new ApiError(400, ' Page nad limit must be valid positive number')
+            throw new ApiError(400, 'Page and limit must be valid positive integers')
         }
 
         const skip = (pageNumber - 1) * limitNumber
