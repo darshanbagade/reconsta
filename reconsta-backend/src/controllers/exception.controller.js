@@ -106,8 +106,8 @@ const assignException = async (req, res, next) => {
             throw new ApiError(404, 'Exception not found')
         }
 
-        if (existingException.status === 'resolved') {
-            throw new ApiError(400, 'Resolved exception cannot be reassigned')
+        if (existingException.status !== 'open') {
+            throw new ApiError(400, 'Only open exceptions can be assigned')
         }
 
         const analyst = await User.findById(assignedTo)
@@ -239,7 +239,7 @@ const resolveException = async (req, res, next) => {
 const escalateException = async (req, res, next) => {
     try {
         const { id } = req.params
-        const { escalatedTo, slaStatus = 'breached' } = req.body || {}
+        const { escalatedTo, slaStatus } = req.body || {}
 
         if (!escalatedTo) {
             throw new ApiError(400, 'Escalated user is required')
@@ -247,7 +247,7 @@ const escalateException = async (req, res, next) => {
 
         const allowedSlaStatuses = ['on_track', 'at_risk', 'breached']
 
-        if (!allowedSlaStatuses.includes(slaStatus)) {
+        if (slaStatus && !allowedSlaStatuses.includes(slaStatus)) {
             throw new ApiError(400, 'Invalid SLA status')
         }
 
@@ -274,12 +274,15 @@ const escalateException = async (req, res, next) => {
             throw new ApiError(400, 'Only open exceptions can be escalated')
         }
 
+        const finalSlaStatus =
+            slaStatus || (new Date() > existingException.slaDeadline ? 'breached' : 'at_risk')
+
         const exception = await Exception.findByIdAndUpdate(
             id,
             {
                 escalatedTo,
                 status: 'escalated',
-                slaStatus
+                slaStatus: finalSlaStatus
             },
             {
                 returnDocument: 'after',
