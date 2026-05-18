@@ -192,18 +192,30 @@ const resolveException = async (req, res, next) => {
                 }
             )
 
-            const updatedAnomaly = await Anomaly.findByIdAndUpdate(
-                existingException.anomalyId,
-                { status: 'resolved' },
-                {
-                    returnDocument: 'after',
-                    runValidators: true,
-                    session: mongoSession
-                }
-            )
+            if (!updatedException) {
+                throw new ApiError(404, 'Exception not found')
+            }
 
-            if (!updatedAnomaly) {
-                throw new ApiError(404, 'Linked anomaly not found')
+            const hasOtherActiveExceptions = await Exception.exists({
+                anomalyId: existingException.anomalyId,
+                _id: { $ne: existingException._id },
+                status: { $in: ['open', 'escalated'] }
+            }).session(mongoSession)
+
+            if (!hasOtherActiveExceptions) {
+                const updatedAnomaly = await Anomaly.findByIdAndUpdate(
+                    existingException.anomalyId,
+                    { status: 'resolved' },
+                    {
+                        returnDocument: 'after',
+                        runValidators: true,
+                        session: mongoSession
+                    }
+                )
+
+                if (!updatedAnomaly) {
+                    throw new ApiError(404, 'Linked anomaly not found')
+                }
             }
 
             resolvedExceptionId = updatedException._id
