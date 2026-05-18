@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser'
 import authRouter from './routes/auth.routes.js';
 import transactionRouter from './routes/transaction.routes.js';
 import anomalyRouter from './routes/anomaly.routes.js';
+import exceptionRouter from './routes/exception.routes.js';
 
 const app = express();
 
@@ -36,7 +37,7 @@ app.get('/health',(req,res)=>{
 app.use('/api/auth', authRouter)
 app.use('/api/transactions', transactionRouter)
 app.use('/api/anomalies',anomalyRouter);
-
+app.use('/api/exceptions', exceptionRouter)
 // errorHandler will be called if an error occurs in routes/controllers/middleware
 app.use(errorHandler);
 
