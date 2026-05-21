@@ -1,6 +1,8 @@
 import AuditLog from '../models/AuditLog.model.js'
 import sendSuccess from '../utils/responseFormatter.js'
 import ApiError from '../utils/ApiError.js'
+import mongoose from 'mongoose'
+import Exception from '../models/Exception.model.js'
 
 // all audit logs with filters + pagination
 const getAuditLogs = async (req, res, next) => {
@@ -14,8 +16,25 @@ const getAuditLogs = async (req, res, next) => {
             page = 1,
             limit = 20
         } = req.query
-
+        
         const filter = {}
+
+        if (performedBy) {
+            if (!mongoose.isValidObjectId(performedBy)) {
+                throw new ApiError(400, 'Invalid performedBy id')
+            }
+
+            filter.performedBy = performedBy
+        }
+
+        if (exceptionId) {
+            if (!mongoose.isValidObjectId(exceptionId)) {
+                throw new ApiError(400, 'Invalid exceptionId')
+            }
+
+            filter.exceptionId = exceptionId
+        }
+
 
         if (action) {
             const allowedActions = ['assigned', 'resolved', 'escalated', 'note_added']
@@ -103,6 +122,23 @@ const getAuditLogs = async (req, res, next) => {
 const getExceptionAuditLogs = async (req, res, next) => {
     try {
         const { exceptionId } = req.params
+
+        if (!mongoose.isValidObjectId(exceptionId)) {
+            throw new ApiError(400, 'Invalid exceptionId')
+        }
+
+        const exception = await Exception.findById(exceptionId)
+
+        if (!exception) {
+            throw new ApiError(404, 'Exception not found')
+        }
+
+        if (
+            req.user.role === 'analyst' &&
+            String(exception.assignedTo) !== String(req.user._id)
+        ) {
+            throw new ApiError(403, 'You can view audit history only for your assigned exceptions')
+        }
 
         const logs = await AuditLog.find({ exceptionId })
             .populate('performedBy', 'name email role')
