@@ -4,7 +4,7 @@ import Exception from '../models/Exception.model.js'
 import User from '../models/User.model.js'
 import Anomaly from '../models/Anomaly.model.js'
 import mongoose from 'mongoose'
-
+import AuditLog from '../models/AuditLog.model.js'
 const getExceptions = async (req, res, next) => {
     try {
         const {
@@ -91,6 +91,7 @@ const getExceptionById = async (req, res, next) => {
     }
 }
 
+// Assign exception will be done by : Admin + Supervisor
 const assignException = async (req, res, next) => {
     try {
         const { id } = req.params
@@ -135,6 +136,21 @@ const assignException = async (req, res, next) => {
             .populate('assignedTo', 'name email role')
             .populate('escalatedTo', 'name email role')
 
+
+        // -- AuditLog creation for exception assignment --
+        await createExceptionAuditLog({
+            exceptionId: exception._id,
+            performedBy: req.user._id,
+            action: 'assigned',
+            previousValue: {
+                assignedTo: existingException.assignedTo,
+                status: existingException.status
+            },
+            newValue: {
+                assignedTo: exception.assignedTo?._id || exception.assignedTo,
+                status: exception.status
+            }
+        })
         return sendSuccess(res, 200, 'Exception assigned successfully', {
             exception
         })
@@ -143,6 +159,7 @@ const assignException = async (req, res, next) => {
     }
 }
 
+// Resolve exception will be done by : Assigned Analyst + Admin/Supervisor
 const resolveException = async (req, res, next) => {
     const mongoSession = await mongoose.startSession()
 
@@ -201,7 +218,8 @@ const resolveException = async (req, res, next) => {
                 _id: { $ne: existingException._id },
                 status: { $in: ['open', 'escalated'] }
             }).session(mongoSession)
-
+            
+            // Update linked anomaly as resolved if needed
             if (!hasOtherActiveExceptions) {
                 const updatedAnomaly = await Anomaly.findByIdAndUpdate(
                     existingException.anomalyId,
@@ -217,6 +235,24 @@ const resolveException = async (req, res, next) => {
                     throw new ApiError(404, 'Linked anomaly not found')
                 }
             }
+
+            // -- Audit Log creation from exception resolved --
+            await createExceptionAuditLog({
+                exceptionId: updatedException._id,
+                performedBy: req.user._id,
+                action: 'resolved',
+                previousValue: {
+                    status: existingException.status,
+                    resolution: existingException.resolution,
+                    resolvedAt: existingException.resolvedAt
+                },
+                newValue: {
+                    status: updatedException.status,
+                    resolution: updatedException.resolution,
+                    resolvedAt: updatedException.resolvedAt
+                },
+                session: mongoSession
+            })
 
             resolvedExceptionId = updatedException._id
         })
@@ -236,6 +272,7 @@ const resolveException = async (req, res, next) => {
     }
 }
 
+// Escalate exceptionwill be done by : Admin + Supervisor
 const escalateException = async (req, res, next) => {
     try {
         const { id } = req.params
@@ -293,12 +330,57 @@ const escalateException = async (req, res, next) => {
             .populate('assignedTo', 'name email role')
             .populate('escalatedTo', 'name email role')
 
+        // -- AuditLog creation for exception escalate
+        await createExceptionAuditLog({
+            exceptionId: exception._id,
+            performedBy: req.user._id,
+            action: 'escalated',
+            previousValue: {
+                status: existingException.status,
+                slaStatus: existingException.slaStatus,
+                escalatedTo: existingException.escalatedTo
+            },
+            newValue: {
+                status: exception.status,
+                slaStatus: exception.slaStatus,
+                escalatedTo: exception.escalatedTo?._id || exception.escalatedTo
+            }
+        })
+
         return sendSuccess(res, 200, 'Exception escalated successfully', {
             exception
         })
     } catch (error) {
         next(error)
     }
+}
+
+// Audit log helper function
+// Session : it is an mongoDB transaction object,
+// that ensures that Exception, Anomaly and Auditog save together 
+// OR rollback, if any error occurs
+const createExceptionAuditLog = async ({
+    exceptionId,
+    performedBy,
+    action,
+    previousValue = {},
+    newValue = {},
+    session = null
+}) => {
+    const auditPayload = {
+        exceptionId,
+        performedBy,
+        action,
+        previousValue,
+        newValue
+    }
+
+    if (session) {
+        const [auditLog] = await AuditLog.create([auditPayload], { session })
+        return auditLog
+    }
+
+    return AuditLog.create(auditPayload)
 }
 
 export {
