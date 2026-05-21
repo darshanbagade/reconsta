@@ -133,6 +133,7 @@ const getExceptionAuditLogs = async (req, res, next) => {
             throw new ApiError(404, 'Exception not found')
         }
 
+        // 2nd condition is to restrict the analyst to see others history
         if (
             req.user.role === 'analyst' &&
             String(exception.assignedTo) !== String(req.user._id)
