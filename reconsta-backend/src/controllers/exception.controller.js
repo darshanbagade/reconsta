@@ -4,7 +4,7 @@ import Exception from '../models/Exception.model.js'
 import User from '../models/User.model.js'
 import Anomaly from '../models/Anomaly.model.js'
 import mongoose from 'mongoose'
-
+import AuditLog from '../models/AuditLog.model.js'
 const getExceptions = async (req, res, next) => {
     try {
         const {
@@ -91,46 +91,81 @@ const getExceptionById = async (req, res, next) => {
     }
 }
 
+// Exception assignment can be done by Admin + Supervisor
 const assignException = async (req, res, next) => {
+    const mongoSession = await mongoose.startSession()
+
     try {
         const { id } = req.params
         const { assignedTo } = req.body || {}
 
-        if (!assignedTo) {
-            throw new ApiError(400, 'Assigned user is required')
+        if (!mongoose.isValidObjectId(id)) {
+            throw new ApiError(400, 'Invalid exception id')
         }
 
-        const existingException = await Exception.findById(id)
-
-        if (!existingException) {
-            throw new ApiError(404, 'Exception not found')
+        if (!assignedTo || !mongoose.isValidObjectId(assignedTo)) {
+            throw new ApiError(400, 'Valid assigned user is required')
         }
 
-        if (existingException.status !== 'open') {
-            throw new ApiError(400, 'Only open exceptions can be assigned')
-        }
+        let assignedExceptionId
 
-        const analyst = await User.findById(assignedTo)
+        await mongoSession.withTransaction(async () => {
+            const existingException = await Exception.findById(id).session(mongoSession)
 
-        if (!analyst || analyst.role !== 'analyst') {
-            throw new ApiError(400, 'Assigned user must be a valid analyst')
-        }
-
-        if (!analyst.isActive) {
-            throw new ApiError(400, 'Assigned analyst account is inactive')
-        }
-
-        const exception = await Exception.findByIdAndUpdate(
-            id,
-            {
-                assignedTo,
-                status: 'open'
-            },
-            {
-                returnDocument: 'after',
-                runValidators: true
+            if (!existingException) {
+                throw new ApiError(404, 'Exception not found')
             }
-        )
+
+            if (existingException.status !== 'open') {
+                throw new ApiError(400, 'Only open exceptions can be assigned')
+            }
+
+            const analyst = await User.findById(assignedTo).session(mongoSession)
+
+            if (!analyst || analyst.role !== 'analyst') {
+                throw new ApiError(400, 'Assigned user must be a valid analyst')
+            }
+
+            if (!analyst.isActive) {
+                throw new ApiError(400, 'Assigned analyst account is inactive')
+            }
+
+            const updatedException = await Exception.findByIdAndUpdate(
+                id,
+                {
+                    assignedTo,
+                    status: 'open'
+                },
+                {
+                    returnDocument: 'after',
+                    runValidators: true,
+                    session: mongoSession
+                }
+            )
+
+            if (!updatedException) {
+                throw new ApiError(404, 'Exception not found')
+            }
+
+            await createExceptionAuditLog({
+                exceptionId: updatedException._id,
+                performedBy: req.user._id,
+                action: 'assigned',
+                previousValue: {
+                    assignedTo: existingException.assignedTo,
+                    status: existingException.status
+                },
+                newValue: {
+                    assignedTo: updatedException.assignedTo,
+                    status: updatedException.status
+                },
+                session: mongoSession
+            })
+
+            assignedExceptionId = updatedException._id
+        })
+
+        const exception = await Exception.findById(assignedExceptionId)
             .populate('anomalyId')
             .populate('assignedTo', 'name email role')
             .populate('escalatedTo', 'name email role')
@@ -140,9 +175,12 @@ const assignException = async (req, res, next) => {
         })
     } catch (error) {
         next(error)
+    } finally {
+        await mongoSession.endSession()
     }
 }
 
+// Resolve exception will be done by Assigned Analyst + Admin/Supervisor
 const resolveException = async (req, res, next) => {
     const mongoSession = await mongoose.startSession()
 
@@ -201,7 +239,8 @@ const resolveException = async (req, res, next) => {
                 _id: { $ne: existingException._id },
                 status: { $in: ['open', 'escalated'] }
             }).session(mongoSession)
-
+            
+            // Update linked anomaly as resolved if needed
             if (!hasOtherActiveExceptions) {
                 const updatedAnomaly = await Anomaly.findByIdAndUpdate(
                     existingException.anomalyId,
@@ -217,6 +256,24 @@ const resolveException = async (req, res, next) => {
                     throw new ApiError(404, 'Linked anomaly not found')
                 }
             }
+
+            // -- Audit Log creation from exception resolved --
+            await createExceptionAuditLog({
+                exceptionId: updatedException._id,
+                performedBy: req.user._id,
+                action: 'resolved',
+                previousValue: {
+                    status: existingException.status,
+                    resolution: existingException.resolution,
+                    resolvedAt: existingException.resolvedAt
+                },
+                newValue: {
+                    status: updatedException.status,
+                    resolution: updatedException.resolution,
+                    resolvedAt: updatedException.resolvedAt
+                },
+                session: mongoSession
+            })
 
             resolvedExceptionId = updatedException._id
         })
@@ -236,7 +293,10 @@ const resolveException = async (req, res, next) => {
     }
 }
 
+// Escalate exceptionwill be done by Admin + Supervisor
 const escalateException = async (req, res, next) => {
+    const mongoSession = await mongoose.startSession()
+
     try {
         const { id } = req.params
         const { escalatedTo, slaStatus } = req.body || {}
@@ -251,44 +311,70 @@ const escalateException = async (req, res, next) => {
             throw new ApiError(400, 'Invalid SLA status')
         }
 
-        const escalationUser = await User.findById(escalatedTo)
+        let updatedExceptionId
 
-        if (
-            !escalationUser ||
-            !['admin', 'supervisor'].includes(escalationUser.role)
-        ) {
-            throw new ApiError(400, 'Escalated user must be a valid admin or supervisor')
-        }
+        await mongoSession.withTransaction(async () => {
+            const escalationUser = await User.findById(escalatedTo).session(mongoSession)
 
-        if (!escalationUser.isActive) {
-            throw new ApiError(400, 'Escalated user account is inactive')
-        }
-
-        const existingException = await Exception.findById(id)
-
-        if (!existingException) {
-            throw new ApiError(404, 'Exception not found')
-        }
-
-        if (existingException.status !== 'open') {
-            throw new ApiError(400, 'Only open exceptions can be escalated')
-        }
-
-        const finalSlaStatus =
-            slaStatus || (new Date() > existingException.slaDeadline ? 'breached' : 'at_risk')
-
-        const exception = await Exception.findByIdAndUpdate(
-            id,
-            {
-                escalatedTo,
-                status: 'escalated',
-                slaStatus: finalSlaStatus
-            },
-            {
-                returnDocument: 'after',
-                runValidators: true
+            if (
+                !escalationUser ||
+                !['admin', 'supervisor'].includes(escalationUser.role)
+            ) {
+                throw new ApiError(400, 'Escalated user must be a valid admin or supervisor')
             }
-        )
+
+            if (!escalationUser.isActive) {
+                throw new ApiError(400, 'Escalated user account is inactive')
+            }
+
+            const existingException = await Exception.findById(id).session(mongoSession)
+
+            if (!existingException) {
+                throw new ApiError(404, 'Exception not found')
+            }
+
+            if (existingException.status !== 'open') {
+                throw new ApiError(400, 'Only open exceptions can be escalated')
+            }
+
+            const finalSlaStatus =
+                slaStatus || (new Date() > existingException.slaDeadline ? 'breached' : 'at_risk')
+
+            const updatedException = await Exception.findByIdAndUpdate(
+                id,
+                {
+                    escalatedTo,
+                    status: 'escalated',
+                    slaStatus: finalSlaStatus
+                },
+                {
+                    returnDocument: 'after',
+                    runValidators: true,
+                    session: mongoSession
+                }
+            )
+
+            await createExceptionAuditLog({
+                exceptionId: updatedException._id,
+                performedBy: req.user._id,
+                action: 'escalated',
+                previousValue: {
+                    status: existingException.status,
+                    slaStatus: existingException.slaStatus,
+                    escalatedTo: existingException.escalatedTo
+                },
+                newValue: {
+                    status: updatedException.status,
+                    slaStatus: updatedException.slaStatus,
+                    escalatedTo: updatedException.escalatedTo
+                },
+                session: mongoSession
+            })
+
+            updatedExceptionId = updatedException._id
+        })
+
+        const exception = await Exception.findById(updatedExceptionId)
             .populate('anomalyId')
             .populate('assignedTo', 'name email role')
             .populate('escalatedTo', 'name email role')
@@ -298,7 +384,37 @@ const escalateException = async (req, res, next) => {
         })
     } catch (error) {
         next(error)
+    } finally {
+        await mongoSession.endSession()
     }
+}
+
+// Audit log helper function
+// session is a MongoDB transaction object.
+// It ensures related updates and audit logs are saved together
+// or rolled back if any error occurs.
+const createExceptionAuditLog = async ({
+    exceptionId,
+    performedBy,
+    action,
+    previousValue = {},
+    newValue = {},
+    session = null
+}) => {
+    const auditPayload = {
+        exceptionId,
+        performedBy,
+        action,
+        previousValue,
+        newValue
+    }
+
+    if (session) {
+        const [auditLog] = await AuditLog.create([auditPayload], { session })
+        return auditLog
+    }
+
+    return AuditLog.create(auditPayload)
 }
 
 export {
