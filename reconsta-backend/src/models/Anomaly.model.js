@@ -1,24 +1,37 @@
 import mongoose from "mongoose";
 
-const riskBreakdownSchema = mongoose.Schema({
-    amountFactor : { 
-        type : Number,
-        default : 0
+
+const riskBreakdownSchema = new mongoose.Schema(
+    {
+        amountFactor: {
+            type: Number,
+            required: true,
+            default: 0,
+            min: 0
+        },
+        timeFactor: {
+            type: Number,
+            required: true,
+            default: 0,
+            min: 0
+        },
+        merchantFactor: {
+            type: Number,
+            required: true,
+            default: 0,
+            min: 0
+        },
+        recurrenceFactor: {
+            type: Number,
+            required: true,
+            default: 0,
+            min: 0
+        }
     },
-    timeFactor : {
-        type : Number,
-        default : 0
-    },
-    merchantFactor : {
-        type : Number,
-        default : 0
-    },
-    recurrenceFactor :{
-        type : Number,
-        default : 0
-    },
-    
-},{ _id : false })
+    {
+        _id: false
+    }
+)
 
 const anomalySchema = mongoose.Schema({
     bankTxnId :{
@@ -30,6 +43,11 @@ const anomalySchema = mongoose.Schema({
         type : mongoose.Schema.Types.ObjectId,
         ref : 'Transaction',
         default : null
+    },
+    sessionId: {
+        type: String,
+        required: true,
+        trim: true
     },
     //anomaly type
     type : {
@@ -61,13 +79,11 @@ const anomalySchema = mongoose.Schema({
     }
 }, { timestamps : true })
 
-// don't use arrow function here because we can't use 'this' (for the reference) in arrow function
-anomalySchema.pre('validate',function(next){
-    if(!this.bankTxnId && !this.posTxnId){
-        return next(new Error("Atleast one transaction reference is required"))
+// don't use arrow function here because we need `this` for the document instance
+anomalySchema.pre('validate', function () {
+    if (!this.bankTxnId && !this.posTxnId) {
+        throw new Error('At least one transaction reference is required')
     }
-
-    next();
 })
 
 /*
@@ -86,6 +102,7 @@ anomalySchema.index({type : 1}) // search on the basis of anomaly type
 // Used for showing latest detected anomalies first
 anomalySchema.index({detectedAt : -1}) 
 
+anomalySchema.index({ sessionId: 1, status: 1 })
 
 /*
     MongoDB chooses best matching index based on the query 
