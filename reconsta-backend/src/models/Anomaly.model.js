@@ -6,21 +6,25 @@ const riskBreakdownSchema = new mongoose.Schema(
         amountFactor: {
             type: Number,
             required: true,
+            default: 0,
             min: 0
         },
         timeFactor: {
             type: Number,
             required: true,
+            default: 0,
             min: 0
         },
         merchantFactor: {
             type: Number,
             required: true,
+            default: 0,
             min: 0
         },
         recurrenceFactor: {
             type: Number,
             required: true,
+            default: 0,
             min: 0
         }
     },
