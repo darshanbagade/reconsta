@@ -4,6 +4,8 @@ import Exception from '../models/Exception.model.js'
 import sendSuccess from '../utils/responseFormatter.js'
 import ApiError from '../utils/ApiError.js'
 
+const ACTIVE_EXCEPTION_STATUSES = ['open', 'escalated']
+
 const formatGroupCounts = (items) => {
     return items.reduce((acc, item) => {
         const key = item._id || 'unknown'
@@ -12,16 +14,28 @@ const formatGroupCounts = (items) => {
     }, {})
 }
 
+// Used to filter exceptions of a specific reconciliation session
 const getSessionExceptionFilter = async (sessionId) => {
     if (!sessionId) {
         return {}
     }
 
-    const anomalies = await Anomaly.find({ sessionId }).select('_id')
+    const anomalyIds = await Anomaly.distinct('_id', { sessionId })
 
     return {
         anomalyId: {
-            $in: anomalies.map((anomaly) => anomaly._id)
+            $in: anomalyIds
+        }
+    }
+}
+
+// Used for current SLA health only.
+// Resolved exceptions are not counted in active SLA state.
+const getActiveExceptionFilter = (exceptionFilter = {}) => {
+    return {
+        ...exceptionFilter,
+        status: {
+            $in: ACTIVE_EXCEPTION_STATUSES
         }
     }
 }
@@ -34,6 +48,7 @@ const getDashboardOverview = async (req, res, next) => {
         const transactionFilter = sessionId ? { sessionId } : {}
         const anomalyFilter = sessionId ? { sessionId } : {}
         const exceptionFilter = await getSessionExceptionFilter(sessionId)
+        const activeExceptionFilter = getActiveExceptionFilter(exceptionFilter)
 
         const [
             totalTransactions,
@@ -67,8 +82,16 @@ const getDashboardOverview = async (req, res, next) => {
             Exception.countDocuments({ ...exceptionFilter, status: 'open' }),
             Exception.countDocuments({ ...exceptionFilter, status: 'escalated' }),
             Exception.countDocuments({ ...exceptionFilter, status: 'resolved' }),
-            Exception.countDocuments({ ...exceptionFilter, slaStatus: 'breached' }),
-            Exception.countDocuments({ ...exceptionFilter, slaStatus: 'at_risk' })
+
+            // Active SLA issues only
+            Exception.countDocuments({
+                ...activeExceptionFilter,
+                slaStatus: 'breached'
+            }),
+            Exception.countDocuments({
+                ...activeExceptionFilter,
+                slaStatus: 'at_risk'
+            })
         ])
 
         return sendSuccess(res, 200, 'Dashboard overview fetched successfully', {
@@ -99,7 +122,7 @@ const getDashboardOverview = async (req, res, next) => {
     }
 }
 
-// Counts for dashboard charts
+// Dashboard charts and grouped metrics
 const getDashboardMetrics = async (req, res, next) => {
     try {
         const { sessionId } = req.query
@@ -168,7 +191,7 @@ const getDashboardMetrics = async (req, res, next) => {
     }
 }
 
-// Risk buckets + top risky anomalies
+// Risk distribution and top risky anomalies
 const getRiskDashboard = async (req, res, next) => {
     try {
         const { sessionId } = req.query
@@ -224,7 +247,7 @@ const getRiskDashboard = async (req, res, next) => {
     }
 }
 
-// Recent feed for dashboard activity
+// Recent anomalies and exceptions activity feed
 const getRecentDashboardActivity = async (req, res, next) => {
     try {
         const {
@@ -277,12 +300,13 @@ const getRecentDashboardActivity = async (req, res, next) => {
     }
 }
 
-// SLA-focused dashboard section
+// SLA summary with breached and at-risk exception lists
 const getSlaDashboard = async (req, res, next) => {
     try {
         const { sessionId } = req.query
 
         const exceptionFilter = await getSessionExceptionFilter(sessionId)
+        const activeExceptionFilter = getActiveExceptionFilter(exceptionFilter)
 
         const [
             onTrack,
@@ -292,12 +316,27 @@ const getSlaDashboard = async (req, res, next) => {
             breachedExceptions,
             atRiskExceptions
         ] = await Promise.all([
-            Exception.countDocuments({ ...exceptionFilter, slaStatus: 'on_track' }),
-            Exception.countDocuments({ ...exceptionFilter, slaStatus: 'at_risk' }),
-            Exception.countDocuments({ ...exceptionFilter, slaStatus: 'breached' }),
-            Exception.countDocuments({ ...exceptionFilter, status: 'escalated' }),
+            Exception.countDocuments({
+                ...activeExceptionFilter,
+                slaStatus: 'on_track'
+            }),
+            Exception.countDocuments({
+                ...activeExceptionFilter,
+                slaStatus: 'at_risk'
+            }),
+            Exception.countDocuments({
+                ...activeExceptionFilter,
+                slaStatus: 'breached'
+            }),
+            Exception.countDocuments({
+                ...exceptionFilter,
+                status: 'escalated'
+            }),
 
-            Exception.find({ ...exceptionFilter, slaStatus: 'breached' })
+            Exception.find({
+                ...activeExceptionFilter,
+                slaStatus: 'breached'
+            })
                 .populate({
                     path: 'anomalyId',
                     populate: [
@@ -310,7 +349,10 @@ const getSlaDashboard = async (req, res, next) => {
                 .sort({ slaDeadline: 1 })
                 .limit(10),
 
-            Exception.find({ ...exceptionFilter, slaStatus: 'at_risk' })
+            Exception.find({
+                ...activeExceptionFilter,
+                slaStatus: 'at_risk'
+            })
                 .populate({
                     path: 'anomalyId',
                     populate: [
