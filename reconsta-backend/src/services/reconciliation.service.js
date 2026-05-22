@@ -13,6 +13,7 @@ import {
 
 const HIGH_RISK_THRESHOLD = 70
 
+// Risk score ke basis par exception priority decide hoti hai
 const getPriorityFromRiskScore = (riskScore) => {
     if (riskScore >= 90) return 'critical'
     if (riskScore >= 70) return 'high'
@@ -20,6 +21,7 @@ const getPriorityFromRiskScore = (riskScore) => {
     return 'low'
 }
 
+// Priority ke basis par SLA deadline auto-generate hoti hai
 const getSlaDeadlineByPriority = (priority) => {
     const now = new Date()
 
@@ -35,6 +37,7 @@ const getSlaDeadlineByPriority = (priority) => {
     return new Date(now.getTime() + hours * 60 * 60 * 1000)
 }
 
+// Matched/fuzzy/mismatch pair ke dono transactions update karta hai
 const updateMatchedTransactions = async ({
     bankTxn,
     posTxn,
@@ -69,6 +72,7 @@ const updateMatchedTransactions = async ({
     )
 }
 
+// Unmatched/duplicate/ghost transaction ko unresolved state mein mark karta hai
 const markTransactionAsUnmatched = async ({ txnId, session }) => {
     await Transaction.findByIdAndUpdate(
         txnId,
@@ -84,14 +88,19 @@ const markTransactionAsUnmatched = async ({ txnId, session }) => {
     )
 }
 
+// Same anomaly dobara create na ho isliye pehle existing anomaly check karte hain
 const createAnomalyIfNotExists = async ({
+    sessionId,
     bankTxnId = null,
     posTxnId = null,
     type,
     riskData,
     session
 }) => {
-    const query = { type }
+    const query = {
+        sessionId,
+        type
+    }
 
     if (bankTxnId) query.bankTxnId = bankTxnId
     if (posTxnId) query.posTxnId = posTxnId
@@ -108,6 +117,7 @@ const createAnomalyIfNotExists = async ({
     const [anomaly] = await Anomaly.create(
         [
             {
+                sessionId,
                 bankTxnId,
                 posTxnId,
                 type,
@@ -125,6 +135,7 @@ const createAnomalyIfNotExists = async ({
     }
 }
 
+// High-risk anomaly ke liye exception auto-create karta hai
 const createExceptionForHighRiskAnomaly = async ({ anomaly, session }) => {
     if (!anomaly || anomaly.riskScore < HIGH_RISK_THRESHOLD) {
         return false
@@ -160,7 +171,9 @@ const createExceptionForHighRiskAnomaly = async ({ anomaly, session }) => {
     return true
 }
 
+// Common helper: anomaly create karo, phir high-risk ho to exception create karo
 const handleAnomalyAndException = async ({
+    sessionId,
     bankTxnId = null,
     posTxnId = null,
     type,
@@ -168,6 +181,7 @@ const handleAnomalyAndException = async ({
     session
 }) => {
     const { anomaly, created } = await createAnomalyIfNotExists({
+        sessionId,
         bankTxnId,
         posTxnId,
         type,
@@ -186,6 +200,7 @@ const handleAnomalyAndException = async ({
     }
 }
 
+// Main reconciliation engine
 const runReconciliation = async (sessionId) => {
     if (!sessionId) {
         throw new ApiError(400, 'Session ID is required')
@@ -197,6 +212,7 @@ const runReconciliation = async (sessionId) => {
         let reconciliationResult
 
         await mongoSession.withTransaction(async () => {
+            // Same session ke bank and POS transactions fetch karte hain
             const bankTransactions = await Transaction.find({
                 sessionId,
                 source: 'bank'
@@ -211,6 +227,7 @@ const runReconciliation = async (sessionId) => {
                 throw new ApiError(400, 'Both bank and POS transactions are required for reconciliation')
             }
 
+            // Merchant recurrence count risk scoring ke liye use hota hai
             const merchantOccurrenceMap = new Map()
 
             for (const txn of [...bankTransactions, ...posTransactions]) {
@@ -218,7 +235,7 @@ const runReconciliation = async (sessionId) => {
                 merchantOccurrenceMap.set(txn.merchantId, currentCount + 1)
             }
 
-            // Step 1: Detect duplicates inside same source
+            // Step 1: Same source ke andar duplicate transactions detect karo
             const duplicateBankTransactions = findDuplicateTransactions(bankTransactions)
             const duplicatePosTransactions = findDuplicateTransactions(posTransactions)
 
@@ -230,7 +247,7 @@ const runReconciliation = async (sessionId) => {
                 duplicatePosTransactions.map((txn) => String(txn._id))
             )
 
-            // Duplicate records are excluded from normal matching
+            // Duplicate records ko normal matching se exclude karte hain
             const matchableBankTransactions = bankTransactions.filter(
                 (bankTxn) => !duplicateBankTxnIds.has(String(bankTxn._id))
             )
@@ -269,17 +286,17 @@ const runReconciliation = async (sessionId) => {
                 matchedPosTxnIds
             )
 
-            // Step 5: Remaining bank transactions are unmatched
+            // Step 5: Jo bank records match nahi hue, woh unmatched hain
             const unmatchedBankTransactions = matchableBankTransactions.filter(
                 (bankTxn) => !matchedBankTxnIds.has(String(bankTxn._id))
             )
 
-            // Step 6: Remaining POS transactions are ghost transactions
+            // Step 6: Jo POS records match nahi hue, woh ghost hain
             const ghostPosTransactions = matchablePosTransactions.filter(
                 (posTxn) => !matchedPosTxnIds.has(String(posTxn._id))
             )
 
-            // Update exact matches
+            // Exact matches ko DB mein mark karo
             for (const match of exactMatches) {
                 await updateMatchedTransactions({
                     bankTxn: match.bankTxn,
@@ -290,7 +307,7 @@ const runReconciliation = async (sessionId) => {
                 })
             }
 
-            // Update fuzzy matches
+            // Fuzzy matches ko DB mein mark karo
             for (const match of fuzzyMatches) {
                 await updateMatchedTransactions({
                     bankTxn: match.bankTxn,
@@ -307,7 +324,7 @@ const runReconciliation = async (sessionId) => {
             let ghostAnomaliesCreated = 0
             let highRiskExceptionsCreated = 0
 
-            // Duplicate bank anomalies
+            // Duplicate bank anomalies create karo
             for (const bankTxn of duplicateBankTransactions) {
                 const merchantOccurrenceCount =
                     merchantOccurrenceMap.get(bankTxn.merchantId) || 1
@@ -320,6 +337,7 @@ const runReconciliation = async (sessionId) => {
                 })
 
                 const result = await handleAnomalyAndException({
+                    sessionId,
                     bankTxnId: bankTxn._id,
                     posTxnId: null,
                     type: 'duplicate',
@@ -336,7 +354,7 @@ const runReconciliation = async (sessionId) => {
                 if (result.exceptionCreated) highRiskExceptionsCreated++
             }
 
-            // Duplicate POS anomalies
+            // Duplicate POS anomalies create karo
             for (const posTxn of duplicatePosTransactions) {
                 const merchantOccurrenceCount =
                     merchantOccurrenceMap.get(posTxn.merchantId) || 1
@@ -349,6 +367,7 @@ const runReconciliation = async (sessionId) => {
                 })
 
                 const result = await handleAnomalyAndException({
+                    sessionId,
                     bankTxnId: null,
                     posTxnId: posTxn._id,
                     type: 'duplicate',
@@ -365,7 +384,7 @@ const runReconciliation = async (sessionId) => {
                 if (result.exceptionCreated) highRiskExceptionsCreated++
             }
 
-            // Amount mismatch anomalies
+            // Amount mismatch anomalies create karo
             for (const match of amountMismatches) {
                 const merchantOccurrenceCount =
                     merchantOccurrenceMap.get(match.bankTxn.merchantId) || 1
@@ -378,6 +397,7 @@ const runReconciliation = async (sessionId) => {
                 })
 
                 const result = await handleAnomalyAndException({
+                    sessionId,
                     bankTxnId: match.bankTxn._id,
                     posTxnId: match.posTxn._id,
                     type: 'mismatch',
@@ -397,7 +417,7 @@ const runReconciliation = async (sessionId) => {
                 if (result.exceptionCreated) highRiskExceptionsCreated++
             }
 
-            // Unmatched bank anomalies
+            // Unmatched bank anomalies create karo
             for (const bankTxn of unmatchedBankTransactions) {
                 const merchantOccurrenceCount =
                     merchantOccurrenceMap.get(bankTxn.merchantId) || 1
@@ -410,6 +430,7 @@ const runReconciliation = async (sessionId) => {
                 })
 
                 const result = await handleAnomalyAndException({
+                    sessionId,
                     bankTxnId: bankTxn._id,
                     posTxnId: null,
                     type: 'unmatched',
@@ -426,7 +447,7 @@ const runReconciliation = async (sessionId) => {
                 if (result.exceptionCreated) highRiskExceptionsCreated++
             }
 
-            // Ghost POS anomalies
+            // Ghost POS anomalies create karo
             for (const posTxn of ghostPosTransactions) {
                 const merchantOccurrenceCount =
                     merchantOccurrenceMap.get(posTxn.merchantId) || 1
@@ -439,6 +460,7 @@ const runReconciliation = async (sessionId) => {
                 })
 
                 const result = await handleAnomalyAndException({
+                    sessionId,
                     bankTxnId: null,
                     posTxnId: posTxn._id,
                     type: 'ghost',
