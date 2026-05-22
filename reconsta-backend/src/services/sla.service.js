@@ -33,7 +33,7 @@ const updateExceptionSlaStatuses = async () => {
         status: {
             $in: ['open', 'escalated']
         }
-    }).select('slaDeadline slaStatus status')
+    }).select('slaDeadline slaStatus').lean()
 
     let updatedCount = 0
 
