@@ -1,13 +1,11 @@
-import { useState } from 'react'
+import AppRoutes from './routes/AppRoutes.jsx'
 
-function App() {
-
-  return (
-    <>
-        <h1>Reconsta frontend</h1>
-        <p>Payment Reconciliation Intelligence Platform</p>
-    </>
-  )
+const App = () => {
+    return (
+        <div className="reconsta-shell">
+            <AppRoutes />
+        </div>
+    )
 }
 
 export default App
