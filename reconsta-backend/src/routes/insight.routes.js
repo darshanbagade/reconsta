@@ -6,7 +6,7 @@ const insightRouter = Router()
 
 // Generate AI investigation insight for one anomaly
 insightRouter.get(
-    '/anomalies/:anomalyId',
+    '/anomalies/:anomalyId/insight',
     verifyJWT,
     getAnomalyAiInsight
 )

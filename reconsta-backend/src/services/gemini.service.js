@@ -62,6 +62,10 @@ const sanitizeTransactionForAI = (transaction) => {
 
 // Send only investigation-relevant anomaly context to AI
 const sanitizeAnomalyForAI = (anomaly) => {
+    if (!anomaly) {
+        return null
+    }
+
     return {
         sessionRef: maskValue(anomaly.sessionId),
         type: anomaly.type,
@@ -120,6 +124,7 @@ Privacy and safety rules:
 - Keep the response short and readable.
 - Return only valid JSON.
 - Do not use markdown.
+- Do not include extra keys outside the required JSON shape.
 
 Return JSON with exactly these keys:
 {
@@ -163,8 +168,95 @@ const safelyParseJson = (text) => {
     }
 }
 
+const validateStringField = (value, fieldName) => {
+    if (typeof value !== 'string' || !value.trim()) {
+        throw new ApiError(502, `AI response field ${fieldName} must be a non-empty string`)
+    }
+
+    return value.trim()
+}
+
+const validateStringArrayField = (value, fieldName) => {
+    if (!Array.isArray(value)) {
+        throw new ApiError(502, `AI response field ${fieldName} must be an array`)
+    }
+
+    if (!value.length) {
+        throw new ApiError(502, `AI response field ${fieldName} must not be empty`)
+    }
+
+    for (const item of value) {
+        if (typeof item !== 'string' || !item.trim()) {
+            throw new ApiError(502, `AI response field ${fieldName} must contain only non-empty strings`)
+        }
+    }
+
+    return value.map((item) => item.trim())
+}
+
+const validateRiskExplanation = (riskExplanation) => {
+    if (
+        !riskExplanation ||
+        typeof riskExplanation !== 'object' ||
+        Array.isArray(riskExplanation)
+    ) {
+        throw new ApiError(502, 'AI response field riskExplanation must be an object')
+    }
+
+    const allowedRiskKeys = [
+        'riskScoreMeaning',
+        'amountFactor',
+        'timeFactor',
+        'merchantFactor',
+        'recurrenceFactor'
+    ]
+
+    const receivedRiskKeys = Object.keys(riskExplanation)
+
+    const hasExtraRiskKeys = receivedRiskKeys.some(
+        (key) => !allowedRiskKeys.includes(key)
+    )
+
+    if (hasExtraRiskKeys) {
+        throw new ApiError(502, 'AI response riskExplanation contains unsupported fields')
+    }
+
+    for (const key of allowedRiskKeys) {
+        if (!(key in riskExplanation)) {
+            throw new ApiError(502, `AI response riskExplanation missing field: ${key}`)
+        }
+    }
+
+    return {
+        riskScoreMeaning: validateStringField(
+            riskExplanation.riskScoreMeaning,
+            'riskExplanation.riskScoreMeaning'
+        ),
+        amountFactor: validateStringField(
+            riskExplanation.amountFactor,
+            'riskExplanation.amountFactor'
+        ),
+        timeFactor: validateStringField(
+            riskExplanation.timeFactor,
+            'riskExplanation.timeFactor'
+        ),
+        merchantFactor: validateStringField(
+            riskExplanation.merchantFactor,
+            'riskExplanation.merchantFactor'
+        ),
+        recurrenceFactor: validateStringField(
+            riskExplanation.recurrenceFactor,
+            'riskExplanation.recurrenceFactor'
+        )
+    }
+}
+
 const validateInsightShape = (insight) => {
-    const requiredKeys = [
+    if (!insight || typeof insight !== 'object' || Array.isArray(insight)) {
+        throw new ApiError(502, 'AI response must be a valid object')
+    }
+
+    const allowedKeys = [
         'summary',
         'whySuspicious',
         'riskExplanation',
@@ -173,21 +265,36 @@ const validateInsightShape = (insight) => {
         'analystNoteDraft'
     ]
 
-    for (const key of requiredKeys) {
+    const receivedKeys = Object.keys(insight)
+
+    const hasExtraKeys = receivedKeys.some(
+        (key) => !allowedKeys.includes(key)
+    )
+
+    if (hasExtraKeys) {
+        throw new ApiError(502, 'AI response contains unsupported fields')
+    }
+
+    for (const key of allowedKeys) {
         if (!(key in insight)) {
             throw new ApiError(502, `AI response missing field: ${key}`)
         }
     }
 
-    if (!Array.isArray(insight.whySuspicious)) {
-        throw new ApiError(502, 'AI response field whySuspicious must be an array')
+    return {
+        summary: validateStringField(insight.summary, 'summary'),
+        whySuspicious: validateStringArrayField(insight.whySuspicious, 'whySuspicious'),
+        riskExplanation: validateRiskExplanation(insight.riskExplanation),
+        recommendedActions: validateStringArrayField(
+            insight.recommendedActions,
+            'recommendedActions'
+        ),
+        priorityReason: validateStringField(insight.priorityReason, 'priorityReason'),
+        analystNoteDraft: validateStringField(
+            insight.analystNoteDraft,
+            'analystNoteDraft'
+        )
     }
-
-    if (!Array.isArray(insight.recommendedActions)) {
-        throw new ApiError(502, 'AI response field recommendedActions must be an array')
-    }
-
-    return insight
 }
 
 const generateAnomalyInsight = async ({
@@ -226,11 +333,13 @@ const generateAnomalyInsight = async ({
     return {
         model: GEMINI_MODEL,
         generatedAt: new Date().toISOString(),
-        dataSharedWithAI: {
+        privacy: {
+            note: 'AI insight was generated using sanitized anomaly context only.',
             rawDatabaseIdsShared: false,
-            userEmailsShared: false,
+            employeeEmailsShared: false,
             fullCsvShared: false,
             transactionIdsMasked: true,
+            sessionRefMasked: true,
             amountShared: true,
             merchantNameShared: true
         },

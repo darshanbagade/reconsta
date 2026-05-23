@@ -1,5 +1,3 @@
-// --- AI Insights controller ---
-
 import mongoose from 'mongoose'
 import Anomaly from '../models/Anomaly.model.js'
 import Exception from '../models/Exception.model.js'
@@ -73,12 +71,6 @@ const getAnomalyAiInsight = async (req, res, next) => {
             sessionId: anomaly.sessionId,
             type: anomaly.type,
             riskScore: anomaly.riskScore,
-            privacy: {
-                note: 'AI insight was generated using sanitized anomaly context only.',
-                rawDatabaseIdsShared: false,
-                employeeEmailsShared: false,
-                fullCsvShared: false
-            },
             ...aiResult
         })
     } catch (error) {
