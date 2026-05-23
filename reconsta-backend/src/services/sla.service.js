@@ -1,7 +1,8 @@
 import Exception from '../models/Exception.model.js'
 import ApiError from '../utils/ApiError.js'
+import { emitSlaUpdated } from './realtime.service.js'
 
-const AT_RISK_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+const ACTIVE_EXCEPTION_STATUSES = ['open', 'escalated']
 
 const calculateSlaStatus = (slaDeadline) => {
     if (!slaDeadline) {
@@ -15,13 +16,14 @@ const calculateSlaStatus = (slaDeadline) => {
         throw new ApiError(400, 'Invalid SLA deadline')
     }
 
-    if (now > deadline) {
+    const remainingTimeMs = deadline.getTime() - now.getTime()
+    const remainingHours = remainingTimeMs / (1000 * 60 * 60)
+
+    if (remainingTimeMs <= 0) {
         return 'breached'
     }
 
-    const atRiskTime = new Date(deadline.getTime() - AT_RISK_WINDOW_MS)
-
-    if (now >= atRiskTime) {
+    if (remainingHours <= 2) {
         return 'at_risk'
     }
 
@@ -29,39 +31,49 @@ const calculateSlaStatus = (slaDeadline) => {
 }
 
 const updateExceptionSlaStatuses = async () => {
-    const activeExceptions = await Exception.find({
+    const exceptions = await Exception.find({
         status: {
-            $in: ['open', 'escalated']
+            $in: ACTIVE_EXCEPTION_STATUSES
         }
-    }).select('slaDeadline slaStatus').lean()
+    })
 
-    let updatedCount = 0
+    let checked = 0
+    let updated = 0
 
-    for (const exception of activeExceptions) {
-        const newSlaStatus = calculateSlaStatus(exception.slaDeadline)
+    for (const exception of exceptions) {
+        checked++
 
-        if (exception.slaStatus !== newSlaStatus) {
-            await Exception.findByIdAndUpdate(
-                exception._id,
-                {
-                    slaStatus: newSlaStatus
-                },
-                {
-                    runValidators: true
-                }
-            )
+        const calculatedSlaStatus = calculateSlaStatus(exception.slaDeadline)
 
-            updatedCount++
+        // Update and emit event only when SLA status actually changes
+        if (calculatedSlaStatus !== exception.slaStatus) {
+            exception.slaStatus = calculatedSlaStatus
+            await exception.save()
+
+            const populatedException = await Exception.findById(exception._id)
+                .populate('anomalyId')
+                .populate('assignedTo', 'name email role')
+                .populate('escalatedTo', 'name email role')
+
+            emitSlaUpdated({
+                exception: populatedException
+            })
+
+            updated++
         }
     }
 
     return {
-        checked: activeExceptions.length,
-        updated: updatedCount
+        checked,
+        updated
     }
 }
 
+// Alias for future readability if we want to call it runSlaCheck
+const runSlaCheck = updateExceptionSlaStatuses
+
 export {
-    calculateSlaStatus,
-    updateExceptionSlaStatuses
+    updateExceptionSlaStatuses,
+    runSlaCheck,
+    calculateSlaStatus
 }
