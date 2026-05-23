@@ -176,6 +176,10 @@ const assignException = async (req, res, next) => {
             .populate('assignedTo', 'name email role')
             .populate('escalatedTo', 'name email role')
 
+        if (!populatedException) {
+            throw new ApiError(404, 'Exception not found')
+        }
+
         emitExceptionAssigned({
             exception: populatedException
         })
@@ -295,6 +299,10 @@ const resolveException = async (req, res, next) => {
             .populate('assignedTo', 'name email role')
             .populate('escalatedTo', 'name email role')
 
+        if (!populatedException) {
+            throw new ApiError(404, 'Exception not found')
+        }
+        
         emitExceptionResolved({
             exception: populatedException
         })
@@ -402,6 +410,10 @@ const escalateException = async (req, res, next) => {
             .populate('anomalyId')
             .populate('assignedTo', 'name email role')
             .populate('escalatedTo', 'name email role')
+
+        if (!populatedException) {
+            throw new ApiError(404, 'Exception not found')
+        }    
 
         emitExceptionEscalated({
             exception: populatedException

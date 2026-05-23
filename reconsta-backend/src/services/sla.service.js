@@ -3,6 +3,8 @@ import ApiError from '../utils/ApiError.js'
 import { emitSlaUpdated } from './realtime.service.js'
 
 const ACTIVE_EXCEPTION_STATUSES = ['open', 'escalated']
+const AT_RISK_WINDOW_HOURS = 2
+const AT_RISK_WINDOW_MS = AT_RISK_WINDOW_HOURS * 60 * 60 * 1000
 
 const calculateSlaStatus = (slaDeadline) => {
     if (!slaDeadline) {
@@ -17,13 +19,14 @@ const calculateSlaStatus = (slaDeadline) => {
     }
 
     const remainingTimeMs = deadline.getTime() - now.getTime()
-    const remainingHours = remainingTimeMs / (1000 * 60 * 60)
 
     if (remainingTimeMs <= 0) {
         return 'breached'
     }
 
-    if (remainingHours <= 2) {
+    const atRiskTime = new Date(deadline.getTime() - AT_RISK_WINDOW_MS)
+
+    if (now >= atRiskTime) {
         return 'at_risk'
     }
 
@@ -36,6 +39,8 @@ const updateExceptionSlaStatuses = async () => {
             $in: ACTIVE_EXCEPTION_STATUSES
         }
     })
+        .select('_id slaDeadline slaStatus')
+        .lean()
 
     let checked = 0
     let updated = 0
@@ -45,19 +50,26 @@ const updateExceptionSlaStatuses = async () => {
 
         const calculatedSlaStatus = calculateSlaStatus(exception.slaDeadline)
 
-        // Update and emit event only when SLA status actually changes
         if (calculatedSlaStatus !== exception.slaStatus) {
-            exception.slaStatus = calculatedSlaStatus
-            await exception.save()
-
-            const populatedException = await Exception.findById(exception._id)
+            const updatedException = await Exception.findByIdAndUpdate(
+                exception._id,
+                {
+                    slaStatus: calculatedSlaStatus
+                },
+                {
+                    returnDocument: 'after',
+                    runValidators: true
+                }
+            )
                 .populate('anomalyId')
                 .populate('assignedTo', 'name email role')
                 .populate('escalatedTo', 'name email role')
 
-            emitSlaUpdated({
-                exception: populatedException
-            })
+            if (updatedException) {
+                emitSlaUpdated({
+                    exception: updatedException
+                })
+            }
 
             updated++
         }
@@ -69,7 +81,6 @@ const updateExceptionSlaStatuses = async () => {
     }
 }
 
-// Alias for future readability if we want to call it runSlaCheck
 const runSlaCheck = updateExceptionSlaStatuses
 
 export {

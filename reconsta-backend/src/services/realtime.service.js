@@ -6,23 +6,56 @@ import {
     emitToOperationsDashboard
 } from '../socket/socket.js'
 
+const isValidExceptionForEmit = (exception) => {
+    return Boolean(exception && exception._id)
+}
+
+const getReferenceId = (value) => {
+    if (!value) {
+        return null
+    }
+
+    if (value._id) {
+        return String(value._id)
+    }
+
+    return String(value)
+}
+
 const getSessionIdFromException = (exception) => {
-    return exception?.anomalyId?.sessionId || null
+    if (!isValidExceptionForEmit(exception)) {
+        return null
+    }
+
+    return exception.anomalyId?.sessionId || null
 }
 
 const getExceptionId = (exception) => {
-    return exception?._id ? String(exception._id) : null
+    if (!isValidExceptionForEmit(exception)) {
+        return null
+    }
+
+    return String(exception._id)
 }
 
 const getAnomalyId = (exception) => {
-    return exception?.anomalyId?._id
-        ? String(exception.anomalyId._id)
-        : exception?.anomalyId
-            ? String(exception.anomalyId)
-            : null
+    if (!isValidExceptionForEmit(exception)) {
+        return null
+    }
+
+    return getReferenceId(exception.anomalyId)
 }
 
-const emitDashboardUpdate = ({ sessionId = null, reason, entityType, entityId = null }) => {
+const emitDashboardUpdate = ({
+    sessionId = null,
+    reason,
+    entityType,
+    entityId = null
+}) => {
+    if (!reason || !entityType) {
+        return false
+    }
+
     emitToOperationsDashboard(SOCKET_EVENTS.DASHBOARD_UPDATED, {
         sessionId,
         reason,
@@ -38,9 +71,15 @@ const emitDashboardUpdate = ({ sessionId = null, reason, entityType, entityId = 
             entityId
         })
     }
+
+    return true
 }
 
 const emitExceptionCreated = ({ exception }) => {
+    if (!isValidExceptionForEmit(exception)) {
+        return false
+    }
+
     const sessionId = getSessionIdFromException(exception)
     const exceptionId = getExceptionId(exception)
 
@@ -53,11 +92,7 @@ const emitExceptionCreated = ({ exception }) => {
         slaStatus: exception.slaStatus
     }
 
-    emitToRoles(
-        ['admin', 'supervisor'],
-        SOCKET_EVENTS.EXCEPTION_CREATED,
-        payload
-    )
+    emitToRoles(['admin', 'supervisor'], SOCKET_EVENTS.EXCEPTION_CREATED, payload)
 
     if (sessionId) {
         emitToSession(sessionId, SOCKET_EVENTS.EXCEPTION_CREATED, payload)
@@ -69,30 +104,33 @@ const emitExceptionCreated = ({ exception }) => {
         entityType: 'exception',
         entityId: exceptionId
     })
+
+    return true
 }
 
 const emitExceptionAssigned = ({ exception }) => {
+    if (!isValidExceptionForEmit(exception)) {
+        return false
+    }
+
     const sessionId = getSessionIdFromException(exception)
     const exceptionId = getExceptionId(exception)
+    const assignedTo = getReferenceId(exception.assignedTo)
 
     const payload = {
         sessionId,
         exceptionId,
         anomalyId: getAnomalyId(exception),
-        assignedTo: exception.assignedTo?._id || exception.assignedTo,
+        assignedTo,
         priority: exception.priority,
         status: exception.status,
         slaStatus: exception.slaStatus
     }
 
-    emitToRoles(
-        ['admin', 'supervisor'],
-        SOCKET_EVENTS.EXCEPTION_ASSIGNED,
-        payload
-    )
+    emitToRoles(['admin', 'supervisor'], SOCKET_EVENTS.EXCEPTION_ASSIGNED, payload)
 
-    if (payload.assignedTo) {
-        emitToUser(payload.assignedTo, SOCKET_EVENTS.EXCEPTION_ASSIGNED, payload)
+    if (assignedTo) {
+        emitToUser(assignedTo, SOCKET_EVENTS.EXCEPTION_ASSIGNED, payload)
     }
 
     if (sessionId) {
@@ -105,29 +143,32 @@ const emitExceptionAssigned = ({ exception }) => {
         entityType: 'exception',
         entityId: exceptionId
     })
+
+    return true
 }
 
 const emitExceptionResolved = ({ exception }) => {
+    if (!isValidExceptionForEmit(exception)) {
+        return false
+    }
+
     const sessionId = getSessionIdFromException(exception)
     const exceptionId = getExceptionId(exception)
+    const assignedTo = getReferenceId(exception.assignedTo)
 
     const payload = {
         sessionId,
         exceptionId,
         anomalyId: getAnomalyId(exception),
-        assignedTo: exception.assignedTo?._id || exception.assignedTo,
+        assignedTo,
         status: exception.status,
         resolvedAt: exception.resolvedAt
     }
 
-    emitToRoles(
-        ['admin', 'supervisor'],
-        SOCKET_EVENTS.EXCEPTION_RESOLVED,
-        payload
-    )
+    emitToRoles(['admin', 'supervisor'], SOCKET_EVENTS.EXCEPTION_RESOLVED, payload)
 
-    if (payload.assignedTo) {
-        emitToUser(payload.assignedTo, SOCKET_EVENTS.EXCEPTION_RESOLVED, payload)
+    if (assignedTo) {
+        emitToUser(assignedTo, SOCKET_EVENTS.EXCEPTION_RESOLVED, payload)
     }
 
     if (sessionId) {
@@ -140,30 +181,34 @@ const emitExceptionResolved = ({ exception }) => {
         entityType: 'exception',
         entityId: exceptionId
     })
+
+    return true
 }
 
 const emitExceptionEscalated = ({ exception }) => {
+    if (!isValidExceptionForEmit(exception)) {
+        return false
+    }
+
     const sessionId = getSessionIdFromException(exception)
     const exceptionId = getExceptionId(exception)
+    const assignedTo = getReferenceId(exception.assignedTo)
+    const escalatedTo = getReferenceId(exception.escalatedTo)
 
     const payload = {
         sessionId,
         exceptionId,
         anomalyId: getAnomalyId(exception),
-        assignedTo: exception.assignedTo?._id || exception.assignedTo,
-        escalatedTo: exception.escalatedTo?._id || exception.escalatedTo,
+        assignedTo,
+        escalatedTo,
         status: exception.status,
         slaStatus: exception.slaStatus
     }
 
-    emitToRoles(
-        ['admin', 'supervisor'],
-        SOCKET_EVENTS.EXCEPTION_ESCALATED,
-        payload
-    )
+    emitToRoles(['admin', 'supervisor'], SOCKET_EVENTS.EXCEPTION_ESCALATED, payload)
 
-    if (payload.assignedTo) {
-        emitToUser(payload.assignedTo, SOCKET_EVENTS.EXCEPTION_ESCALATED, payload)
+    if (assignedTo) {
+        emitToUser(assignedTo, SOCKET_EVENTS.EXCEPTION_ESCALATED, payload)
     }
 
     if (sessionId) {
@@ -176,30 +221,33 @@ const emitExceptionEscalated = ({ exception }) => {
         entityType: 'exception',
         entityId: exceptionId
     })
+
+    return true
 }
 
 const emitSlaUpdated = ({ exception }) => {
+    if (!isValidExceptionForEmit(exception)) {
+        return false
+    }
+
     const sessionId = getSessionIdFromException(exception)
     const exceptionId = getExceptionId(exception)
+    const assignedTo = getReferenceId(exception.assignedTo)
 
     const payload = {
         sessionId,
         exceptionId,
         anomalyId: getAnomalyId(exception),
-        assignedTo: exception.assignedTo?._id || exception.assignedTo,
+        assignedTo,
         status: exception.status,
         slaStatus: exception.slaStatus,
         slaDeadline: exception.slaDeadline
     }
 
-    emitToRoles(
-        ['admin', 'supervisor'],
-        SOCKET_EVENTS.SLA_UPDATED,
-        payload
-    )
+    emitToRoles(['admin', 'supervisor'], SOCKET_EVENTS.SLA_UPDATED, payload)
 
-    if (payload.assignedTo) {
-        emitToUser(payload.assignedTo, SOCKET_EVENTS.SLA_UPDATED, payload)
+    if (assignedTo) {
+        emitToUser(assignedTo, SOCKET_EVENTS.SLA_UPDATED, payload)
     }
 
     if (sessionId) {
@@ -207,14 +255,10 @@ const emitSlaUpdated = ({ exception }) => {
     }
 
     if (exception.slaStatus === 'breached') {
-        emitToRoles(
-            ['admin', 'supervisor'],
-            SOCKET_EVENTS.SLA_BREACHED,
-            payload
-        )
+        emitToRoles(['admin', 'supervisor'], SOCKET_EVENTS.SLA_BREACHED, payload)
 
-        if (payload.assignedTo) {
-            emitToUser(payload.assignedTo, SOCKET_EVENTS.SLA_BREACHED, payload)
+        if (assignedTo) {
+            emitToUser(assignedTo, SOCKET_EVENTS.SLA_BREACHED, payload)
         }
 
         if (sessionId) {
@@ -228,6 +272,8 @@ const emitSlaUpdated = ({ exception }) => {
         entityType: 'exception',
         entityId: exceptionId
     })
+
+    return true
 }
 
 export {
