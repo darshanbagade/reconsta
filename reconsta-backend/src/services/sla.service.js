@@ -1,7 +1,10 @@
 import Exception from '../models/Exception.model.js'
 import ApiError from '../utils/ApiError.js'
+import { emitSlaUpdated } from './realtime.service.js'
 
-const AT_RISK_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+const ACTIVE_EXCEPTION_STATUSES = ['open', 'escalated']
+const AT_RISK_WINDOW_HOURS = 2
+const AT_RISK_WINDOW_MS = AT_RISK_WINDOW_HOURS * 60 * 60 * 1000
 
 const calculateSlaStatus = (slaDeadline) => {
     if (!slaDeadline) {
@@ -15,7 +18,9 @@ const calculateSlaStatus = (slaDeadline) => {
         throw new ApiError(400, 'Invalid SLA deadline')
     }
 
-    if (now > deadline) {
+    const remainingTimeMs = deadline.getTime() - now.getTime()
+
+    if (remainingTimeMs <= 0) {
         return 'breached'
     }
 
@@ -29,39 +34,57 @@ const calculateSlaStatus = (slaDeadline) => {
 }
 
 const updateExceptionSlaStatuses = async () => {
-    const activeExceptions = await Exception.find({
+    const exceptions = await Exception.find({
         status: {
-            $in: ['open', 'escalated']
+            $in: ACTIVE_EXCEPTION_STATUSES
         }
-    }).select('slaDeadline slaStatus').lean()
+    })
+        .select('_id slaDeadline slaStatus')
+        .lean()
 
-    let updatedCount = 0
+    let checked = 0
+    let updated = 0
 
-    for (const exception of activeExceptions) {
-        const newSlaStatus = calculateSlaStatus(exception.slaDeadline)
+    for (const exception of exceptions) {
+        checked++
 
-        if (exception.slaStatus !== newSlaStatus) {
-            await Exception.findByIdAndUpdate(
+        const calculatedSlaStatus = calculateSlaStatus(exception.slaDeadline)
+
+        if (calculatedSlaStatus !== exception.slaStatus) {
+            const updatedException = await Exception.findByIdAndUpdate(
                 exception._id,
                 {
-                    slaStatus: newSlaStatus
+                    slaStatus: calculatedSlaStatus
                 },
                 {
+                    returnDocument: 'after',
                     runValidators: true
                 }
             )
+                .populate('anomalyId')
+                .populate('assignedTo', 'name email role')
+                .populate('escalatedTo', 'name email role')
 
-            updatedCount++
+            if (updatedException) {
+                emitSlaUpdated({
+                    exception: updatedException
+                })
+            }
+
+            updated++
         }
     }
 
     return {
-        checked: activeExceptions.length,
-        updated: updatedCount
+        checked,
+        updated
     }
 }
 
+const runSlaCheck = updateExceptionSlaStatuses
+
 export {
-    calculateSlaStatus,
-    updateExceptionSlaStatuses
+    updateExceptionSlaStatuses,
+    runSlaCheck,
+    calculateSlaStatus
 }
