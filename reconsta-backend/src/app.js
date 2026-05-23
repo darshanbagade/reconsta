@@ -11,6 +11,7 @@ import auditLogRouter from './routes/auditLog.routes.js'
 import slaRouter from './routes/sla.routes.js'
 import reconciliationRouter from './routes/reconciliation.routes.js' 
 import dashboardRouter from './routes/dashboard.routes.js'
+import insightRouter from './routes/insight.routes.js'
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use('/api/audit-logs', auditLogRouter)
 app.use('/api/sla', slaRouter)
 app.use('/api/reconciliation', reconciliationRouter)
 app.use('/api/dashboard', dashboardRouter)
+app.use('/api/insights', insightRouter)
 
 // errorHandler will be called if an error occurs in routes/controllers/middleware
 app.use(errorHandler);
