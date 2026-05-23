@@ -13,7 +13,7 @@ const runReconciliationController = async (req, res, next) => {
         const result = await runReconciliation(sessionId)
 
         // Emit only after reconciliation service completes successfully
-        emitToSession(
+        const sessionEmitSuccess = emitToSession(
             sessionId,
             SOCKET_EVENTS.RECONCILIATION_COMPLETED,
             {
@@ -22,7 +22,7 @@ const runReconciliationController = async (req, res, next) => {
             }
         )
 
-        emitToOperationsDashboard(
+        const dashboardEmitSuccess = emitToOperationsDashboard(
             SOCKET_EVENTS.DASHBOARD_UPDATED,
             {
                 sessionId,
@@ -30,6 +30,15 @@ const runReconciliationController = async (req, res, next) => {
                 result
             }
         )
+
+        // Socket failure should not fail the API, but we log it for debugging
+        if (!sessionEmitSuccess) {
+            console.warn(`Socket emit failed: ${SOCKET_EVENTS.RECONCILIATION_COMPLETED}`)
+        }
+
+        if (!dashboardEmitSuccess) {
+            console.warn(`Socket emit failed: ${SOCKET_EVENTS.DASHBOARD_UPDATED}`)
+        }
 
         return sendSuccess(res, 200, 'Reconciliation completed successfully', {
             result

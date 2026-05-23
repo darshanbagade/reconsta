@@ -33,12 +33,24 @@ const parseCookies = (cookieHeader = '') => {
                 return acc
             }
 
-            const key = cookie.slice(0, separatorIndex)
-            const value = cookie.slice(separatorIndex + 1)
+            const key = cookie.slice(0, separatorIndex).trim()
+            const rawValue = cookie.slice(separatorIndex + 1)
 
-            acc[key] = decodeURIComponent(value)
+            // Prevent prototype pollution from client-controlled cookie names
+            const blockedKeys = ['__proto__', 'constructor', 'prototype']
+
+            if (!key || blockedKeys.includes(key)) {
+                return acc
+            }
+
+            try {
+                acc[key] = decodeURIComponent(rawValue)
+            } catch {
+                acc[key] = rawValue
+            }
+
             return acc
-        }, {})
+        }, Object.create(null))
 }
 
 const getTokenFromSocket = (socket) => {
@@ -116,6 +128,10 @@ const isValidSessionId = (sessionId) => {
 }
 
 const initializeSocket = (httpServer) => {
+    if (io) {
+        return io
+    }
+
     io = new Server(httpServer, {
         cors: {
             origin: env.CLIENT_URL,
