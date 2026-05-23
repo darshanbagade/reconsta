@@ -3,6 +3,11 @@ import { LockKeyhole } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle.jsx'
 
 const LoginPage = () => {
+
+    const handleLoginSubmit = (event) => {
+        event.preventDefault()
+    }
+
     return (
         <main className="flex min-h-screen bg-[var(--bg-main)] text-[var(--text-main)]">
             <section className="hidden min-h-screen w-[42%] border-r border-[var(--border)] p-10 lg:flex lg:flex-col lg:justify-between">
@@ -65,12 +70,16 @@ const LoginPage = () => {
                             Use your internal account credentials.
                         </p>
 
-                        <form className="mt-6 grid gap-4">
+                        <form onSubmit={handleLoginSubmit} className="mt-6 grid gap-4">
                             <div>
-                                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                                <label
+                                    htmlFor="email"
+                                    className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+                                >
                                     Email
                                 </label>
                                 <input
+                                    id="email"
                                     type="email"
                                     className="rc-input h-11 px-3 text-sm"
                                     placeholder="analyst@reconsta.com"
@@ -78,10 +87,14 @@ const LoginPage = () => {
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                                <label
+                                    htmlFor="password"
+                                    className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+                                >
                                     Password
                                 </label>
                                 <input
+                                    id="password"
                                     type="password"
                                     className="rc-input h-11 px-3 text-sm"
                                     placeholder="Enter password"
@@ -89,7 +102,7 @@ const LoginPage = () => {
                             </div>
 
                             <button
-                                type="button"
+                                type="submit"
                                 className="rc-btn-primary h-11 px-4 text-sm"
                             >
                                 Continue

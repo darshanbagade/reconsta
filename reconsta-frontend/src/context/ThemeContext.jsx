@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useLayoutEffect, useMemo, useState } from 'react'
 
 const ThemeContext = createContext(null)
 
@@ -15,7 +15,7 @@ const getInitialTheme = () => {
 const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useState(getInitialTheme)
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const root = document.documentElement
 
         root.classList.remove('light', 'dark')

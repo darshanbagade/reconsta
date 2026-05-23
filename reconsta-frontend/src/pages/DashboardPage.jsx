@@ -106,8 +106,8 @@ const DashboardPage = () => {
                                     Reconciliation overview
                                 </h1>
                                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                                    This is the protected dashboard shell. Live backend
-                                    data will be connected in the next steps.
+                                    This dashboard shell will be connected with 
+                                    protected backend data in the next steps.
                                 </p>
                             </div>
 
