@@ -124,7 +124,14 @@ const UploadPage = () => {
             setReconciliationResult(data.result || data)
             setSuccessMessage('Reconciliation completed successfully.')
         } catch (reconciliationError) {
-            setError(reconciliationError.message || 'Failed to run reconciliation')
+            const message = reconciliationError.message || 'Failed to run reconciliation'
+
+            if (message.includes('not allowed to perform this action')) {
+                setError('Only admin or supervisor accounts can run reconciliation.')
+                return
+            }
+
+            setError(message)
         } finally {
             setIsReconciling(false)
         }
