@@ -5,6 +5,7 @@ import DashboardPage from '../pages/DashboardPage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import UploadPage from '../pages/UploadPage.jsx'
+import TransactionsPage from '../pages/TransactionsPage.jsx'
 
 const AppRoutes = () => {
     return (
@@ -33,7 +34,16 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
-            
+
+            <Route
+                path="/transactions"
+                element={
+                    <ProtectedRoute>
+                        <TransactionsPage />
+                    </ProtectedRoute>
+                }
+            />
+
         </Routes>
     )
 }
