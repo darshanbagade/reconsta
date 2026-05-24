@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
     AlertTriangle,
@@ -173,6 +173,7 @@ const AppLayout = ({
     const location = useLocation()
     const { logout, user } = useAuth()
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+    const [isMobileViewport, setIsMobileViewport] = useState(false)
 
     const role = user?.role || 'analyst'
     const navigationItems = getNavigationItems(role)
@@ -180,6 +181,21 @@ const AppLayout = ({
     const closeMobileSidebar = () => {
         setIsMobileSidebarOpen(false)
     }
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(max-width: 1023px)')
+
+        const updateViewport = (event) => {
+            setIsMobileViewport(event.matches)
+        }
+
+        setIsMobileViewport(mediaQuery.matches)
+        mediaQuery.addEventListener('change', updateViewport)
+
+        return () => {
+            mediaQuery.removeEventListener('change', updateViewport)
+        }
+    }, [])
 
     const handleLogout = async () => {
         try {
@@ -252,15 +268,17 @@ const AppLayout = ({
                 <section className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
                     <header className="flex h-16 shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--bg-main)] px-5">
                         <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setIsMobileSidebarOpen(true)}
-                                className="rc-btn-secondary h-9 w-9 lg:hidden"
-                                aria-label="Open menu"
-                                aria-expanded={isMobileSidebarOpen}
-                            >
-                                <Menu size={16} />
-                            </button>
+                            {isMobileViewport && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMobileSidebarOpen(true)}
+                                    className="rc-btn-secondary h-9 w-9 lg:hidden"
+                                    aria-label="Open menu"
+                                    aria-expanded={isMobileSidebarOpen}
+                                >
+                                    <Menu size={16} />
+                                </button>
+                            )}
 
                             <div>
                                 <p className="text-sm font-semibold">
@@ -284,15 +302,6 @@ const AppLayout = ({
                             </div>
 
                             <ThemeToggle />
-
-                            <button
-                                type="button"
-                                onClick={handleLogout}
-                                className="rc-btn-secondary h-9 px-3 text-sm lg:hidden"
-                            >
-                                <LogOut size={15} />
-                                <span className="hidden sm:inline">Logout</span>
-                            </button>
                         </div>
                     </header>
 

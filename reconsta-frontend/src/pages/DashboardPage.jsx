@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
     AlertTriangle,
     Bot,
@@ -10,6 +11,222 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import AppLayout from '../layouts/AppLayout.jsx'
+import {
+    getDashboardOverview,
+    getDashboardMetrics,
+    getDashboardRisk,
+    getDashboardSla,
+    getDashboardRecent
+} from '../services/dashboardApi.js'
+import { getTransactionSessions } from '../services/transactionApi.js'
+
+const getResponseData = (response) => {
+    return response?.data || {}
+}
+
+const getNumber = (...values) => {
+    const validValue = values.find(
+        (value) => typeof value === 'number' && !Number.isNaN(value)
+    )
+
+    return validValue ?? 0
+}
+
+const formatMetricLabel = (key = '') => {
+    return key
+        .replaceAll('_', ' ')
+        .replace(/([A-Z])/g, ' $1')
+        .trim()
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+const objectToMetricRows = (metricObject = {}) => {
+    const entries = Object.entries(metricObject)
+
+    if (entries.length === 0) {
+        return [
+            {
+                label: 'No data',
+                value: 0
+            }
+        ]
+    }
+
+    return entries.map(([key, value]) => ({
+        label: formatMetricLabel(key),
+        value: getNumber(value)
+    }))
+}
+
+const getMetricGroups = (metricsData = {}) => {
+    return [
+        {
+            title: 'Transactions by status',
+            rows: objectToMetricRows(metricsData.transactionsByStatus)
+        },
+        {
+            title: 'Transactions by source',
+            rows: objectToMetricRows(metricsData.transactionsBySource)
+        },
+        {
+            title: 'Anomalies by type',
+            rows: objectToMetricRows(metricsData.anomaliesByType)
+        },
+        {
+            title: 'Exceptions by priority',
+            rows: objectToMetricRows(metricsData.exceptionsByPriority)
+        }
+    ]
+}
+
+const formatDateTime = (dateValue) => {
+    if (!dateValue) {
+        return '-'
+    }
+
+    return new Intl.DateTimeFormat('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(new Date(dateValue))
+}
+
+const getMerchantName = (anomaly) => {
+    return (
+        anomaly?.bankTxnId?.merchantName ||
+        anomaly?.posTxnId?.merchantName ||
+        anomaly?.anomalyId?.bankTxnId?.merchantName ||
+        anomaly?.anomalyId?.posTxnId?.merchantName ||
+        '-'
+    )
+}
+
+const getSessionsFromResponse = (response) => {
+    return response?.data?.sessions || []
+}
+
+const formatSessionDate = (dateValue) => {
+    if (!dateValue) {
+        return 'Unknown date'
+    }
+
+    return new Intl.DateTimeFormat('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(new Date(dateValue))
+}
+
+const getSessionDisplayName = (session) => {
+    if (!session) {
+        return 'Unknown session'
+    }
+
+    const uploadedDate = formatSessionDate(session.uploadedAt)
+
+    return `Batch ${uploadedDate} · ${session.totalTransactions || 0} txns`
+}
+
+const getRiskRows = (riskData = {}) => {
+    const buckets = riskData.riskBuckets || {}
+
+    return [
+        {
+            label: 'Critical risk',
+            value: getNumber(buckets.critical),
+            note: 'Highest priority anomalies'
+        },
+        {
+            label: 'High risk',
+            value: getNumber(buckets.high),
+            note: 'Needs supervisor attention'
+        },
+        {
+            label: 'Medium risk',
+            value: getNumber(buckets.medium),
+            note: 'Review required'
+        },
+        {
+            label: 'Low risk',
+            value: getNumber(buckets.low),
+            note: 'Monitor only'
+        }
+    ]
+}
+
+const getSlaRows = (slaData = {}) => {
+    const summary = slaData.summary || {}
+
+    return [
+        {
+            label: 'On track',
+            value: getNumber(summary.onTrack)
+        },
+        {
+            label: 'At risk',
+            value: getNumber(summary.atRisk)
+        },
+        {
+            label: 'Breached',
+            value: getNumber(summary.breached)
+        },
+        {
+            label: 'Escalated',
+            value: getNumber(summary.escalated)
+        }
+    ]
+}
+
+const getRecentActivityRows = (recentData = {}) => {
+    const recentAnomalies = recentData.recentAnomalies || []
+    const recentExceptions = recentData.recentExceptions || []
+
+    const anomalyRows = recentAnomalies.map((anomaly) => ({
+        id: `anomaly-${anomaly._id}`,
+        type: `${anomaly.type || 'Anomaly'} anomaly`,
+        module: 'Anomaly',
+        status: anomaly.status || '-',
+        owner: getMerchantName(anomaly),
+        time: formatDateTime(anomaly.detectedAt || anomaly.createdAt)
+    }))
+
+    const exceptionRows = recentExceptions.map((exception) => ({
+        id: `exception-${exception._id}`,
+        type: `${exception.priority || 'Normal'} priority exception`,
+        module: 'Exception',
+        status: exception.status || '-',
+        owner:
+            exception.assignedTo?.name ||
+            exception.escalatedTo?.name ||
+            'Unassigned',
+        time: formatDateTime(exception.updatedAt || exception.createdAt)
+    }))
+
+    const rows = [...exceptionRows, ...anomalyRows]
+
+    if (rows.length === 0) {
+        return [
+            {
+                id: 'empty',
+                type: 'No recent activity',
+                module: 'Dashboard',
+                status: 'Empty',
+                owner: '-',
+                time: '-'
+            }
+        ]
+    }
+
+    return rows.slice(0, 5)
+}
+
+const getTopRiskAnomalies = (riskData = {}) => {
+    return riskData.topRiskAnomalies || []
+}
 
 const hasRole = (userRole, allowedRoles = []) => {
     return allowedRoles.includes(userRole)
@@ -39,31 +256,34 @@ const getRoleDashboardCopy = (role) => {
     }
 }
 
-const getKpiCards = (role) => {
+const getKpiCards = (role, overview = {}) => {
     if (role === 'analyst') {
         return [
             {
                 label: 'Assigned exceptions',
-                value: '0',
+                value: getNumber(
+                    overview.exceptions?.open,
+                    overview.exceptions?.total
+                ),
                 detail: 'Your active queue',
                 icon: ListChecks
             },
             {
                 label: 'Due soon',
-                value: '0',
+                value: getNumber(overview.exceptions?.atRisk),
                 detail: 'SLA at risk',
                 icon: Clock3
             },
             {
-                label: 'Resolved today',
-                value: '0',
+                label: 'Resolved',
+                value: getNumber(overview.exceptions?.resolved),
                 detail: 'Completed cases',
                 icon: CheckCircle2
             },
             {
-                label: 'AI insights used',
-                value: '0',
-                detail: 'Investigation support',
+                label: 'High-risk anomalies',
+                value: getNumber(overview.anomalies?.highRisk),
+                detail: 'Needs investigation support',
                 icon: Bot
             }
         ]
@@ -72,82 +292,42 @@ const getKpiCards = (role) => {
     return [
         {
             label: 'Total transactions',
-            value: '0',
-            detail: 'Across selected session',
+            value: getNumber(overview.transactions?.total),
+            detail: 'Across selected scope',
             icon: Database
         },
         {
             label: 'Open anomalies',
-            value: '0',
+            value: getNumber(overview.anomalies?.open),
             detail: 'Require review',
             icon: AlertTriangle
         },
         {
             label: 'Open exceptions',
-            value: '0',
+            value: getNumber(overview.exceptions?.open),
             detail: 'Active investigation queue',
             icon: ListChecks
         },
         {
             label: 'SLA breached',
-            value: '0',
+            value: getNumber(overview.exceptions?.breached),
             detail: 'Needs immediate action',
             icon: Clock3
         }
     ]
 }
 
-const riskRows = [
-    {
-        label: 'Critical risk',
-        value: 0,
-        note: 'High priority anomalies'
-    },
-    {
-        label: 'High risk',
-        value: 0,
-        note: 'Needs supervisor attention'
-    },
-    {
-        label: 'Medium risk',
-        value: 0,
-        note: 'Review required'
-    },
-    {
-        label: 'Low risk',
-        value: 0,
-        note: 'Monitor only'
+const getReconciliationHealth = (overview = {}) => {
+    return {
+        matched: getNumber(
+            overview.transactions?.matched,
+            overview.transactions?.fuzzy
+        ),
+        fuzzy: getNumber(overview.transactions?.fuzzy),
+        unmatched: getNumber(overview.transactions?.unmatched),
+        exceptions: getNumber(overview.exceptions?.total)
     }
-]
-
-const slaRows = [
-    {
-        label: 'On track',
-        value: 0
-    },
-    {
-        label: 'At risk',
-        value: 0
-    },
-    {
-        label: 'Breached',
-        value: 0
-    },
-    {
-        label: 'Escalated',
-        value: 0
-    }
-]
-
-const activityRows = [
-    {
-        type: 'No recent activity',
-        module: 'Dashboard',
-        status: 'Empty',
-        owner: '-',
-        time: '-'
-    }
-]
+}
 
 const workQueueRows = [
     {
@@ -161,9 +341,161 @@ const workQueueRows = [
 const DashboardPage = () => {
     const { user } = useAuth()
 
+    const [overview, setOverview] = useState({})
+    const [isOverviewLoading, setIsOverviewLoading] = useState(true)
+    const [overviewError, setOverviewError] = useState('')
+    const [metricsData, setMetricsData] = useState({})
+    const [riskData, setRiskData] = useState({})
+    const [slaData, setSlaData] = useState({})
+    const [recentData, setRecentData] = useState({})
+    const [isDashboardDetailsLoading, setIsDashboardDetailsLoading] = useState(false)
+    const [dashboardDetailsError, setDashboardDetailsError] = useState('')
+    const [sessions, setSessions] = useState([])
+    const [selectedSessionId, setSelectedSessionId] = useState('')
+    const [isSessionsLoading, setIsSessionsLoading] = useState(true)
+    const [sessionsError, setSessionsError] = useState('')
+    const [hasLoadedSessions, setHasLoadedSessions] = useState(false)
+
     const role = user?.role || 'analyst'
+    const canAccessDashboardApis = hasRole(role, ['admin', 'supervisor'])
+
+    useEffect(() => {
+        const fetchSessions = async () => {
+            if (!canAccessDashboardApis) {
+                setSessions([])
+                setSelectedSessionId('')
+                setSessionsError('')
+                setIsSessionsLoading(false)
+                setHasLoadedSessions(true)
+                return
+            }
+
+            try {
+                setHasLoadedSessions(false)
+                setIsSessionsLoading(true)
+                setSessionsError('')
+
+                const response = await getTransactionSessions()
+                const fetchedSessions = getSessionsFromResponse(response)
+
+                setSessions(fetchedSessions)
+
+                if (fetchedSessions.length > 0) {
+                    setSelectedSessionId(fetchedSessions[0].sessionId)
+                }
+            } catch (error) {
+                setSessions([])
+                setSelectedSessionId('')
+                setSessionsError(
+                    error.message || 'Failed to load reconciliation sessions'
+                )
+            } finally {
+                setIsSessionsLoading(false)
+                setHasLoadedSessions(true)
+            }
+        }
+
+        fetchSessions()
+    }, [canAccessDashboardApis])
+
+    useEffect(() => {
+        const fetchDashboardOverview = async () => {
+            if (!canAccessDashboardApis) {
+                setOverview({})
+                setOverviewError('')
+                setIsOverviewLoading(false)
+                return
+            }
+
+            if (!hasLoadedSessions) {
+                return
+            }
+
+            try {
+                setIsOverviewLoading(true)
+                setOverviewError('')
+
+                const response = await getDashboardOverview(selectedSessionId)
+                const dashboardOverview = getResponseData(response)
+
+                setOverview(dashboardOverview)
+            } catch (error) {
+                setOverviewError(error.message || 'Failed to load dashboard overview')
+                setOverview({})
+            } finally {
+                setIsOverviewLoading(false)
+            }
+        }
+
+        fetchDashboardOverview()
+    }, [canAccessDashboardApis, hasLoadedSessions, selectedSessionId])
+
+    useEffect(() => {
+        const fetchDashboardDetails = async () => {
+            if (!canAccessDashboardApis) {
+                setMetricsData({})
+                setRiskData({})
+                setSlaData({})
+                setRecentData({})
+                setDashboardDetailsError('')
+                setIsDashboardDetailsLoading(false)
+                return
+            }
+
+            if (!hasLoadedSessions) {
+                return
+            }
+
+            try {
+                setIsDashboardDetailsLoading(true)
+                setDashboardDetailsError('')
+
+                const [
+                    metricsResponse,
+                    riskResponse,
+                    slaResponse,
+                    recentResponse
+                ] = await Promise.all([
+                    getDashboardMetrics(selectedSessionId),
+                    getDashboardRisk(selectedSessionId),
+                    getDashboardSla(selectedSessionId),
+                    getDashboardRecent({
+                        sessionId: selectedSessionId,
+                        limit: 5
+                    })
+                ])
+
+                setMetricsData(getResponseData(metricsResponse))
+                setRiskData(getResponseData(riskResponse))
+                setSlaData(getResponseData(slaResponse))
+                setRecentData(getResponseData(recentResponse))
+            } catch (error) {
+                setMetricsData({})
+                setRiskData({})
+                setSlaData({})
+                setRecentData({})
+                setDashboardDetailsError(
+                    error.message || 'Failed to load dashboard details'
+                )
+            } finally {
+                setIsDashboardDetailsLoading(false)
+            }
+        }
+
+        fetchDashboardDetails()
+    }, [canAccessDashboardApis, hasLoadedSessions, selectedSessionId])
+
     const dashboardCopy = getRoleDashboardCopy(role)
-    const kpiCards = getKpiCards(role)
+    const kpiCards = getKpiCards(role, overview)
+    const reconciliationHealth = getReconciliationHealth(overview)
+    const slaOverviewRows = getSlaRows(slaData)
+    const riskOverviewRows = getRiskRows(riskData)
+    const recentActivityRows = getRecentActivityRows(recentData)
+    const topRiskAnomalies = getTopRiskAnomalies(riskData)
+    const metricGroups = getMetricGroups(metricsData)
+    const selectedSession = sessions.find(
+        (session) => session.sessionId === selectedSessionId
+    )
 
     return (
         <AppLayout
@@ -188,26 +520,77 @@ const DashboardPage = () => {
                     <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
                         {dashboardCopy.description}
                     </p>
+
+                    {selectedSessionId && (
+                        <div className="mt-2 max-w-3xl text-xs text-[var(--text-muted)]">
+                            <p>
+                                Viewing: {selectedSession ? getSessionDisplayName(selectedSession) : selectedSessionId}
+                            </p>
+                            <p className="mt-1 break-all">
+                                Session ID: {selectedSessionId}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row">
-                    <button
-                        type="button"
-                        className="rc-btn-secondary h-10 px-4 text-sm"
+                    <select
+                        value={selectedSessionId}
+                        onChange={(event) => setSelectedSessionId(event.target.value)}
+                        disabled={!canAccessDashboardApis || isSessionsLoading}
+                        className="rc-input h-10 min-w-[280px] px-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                        Select session
-                    </button>
+                        <option value="">
+                            {isSessionsLoading ? 'Loading sessions...' : 'All sessions'}
+                        </option>
+
+                        {sessions.map((session) => (
+                            <option key={session.sessionId} value={session.sessionId}>
+                                {getSessionDisplayName(session)}
+                            </option>
+                        ))}
+                    </select>
 
                     {hasRole(role, ['admin', 'supervisor']) && (
                         <button
                             type="button"
-                            className="rc-btn-primary h-10 px-4 text-sm"
+                            className="rc-btn-primary h-10 min-w-[160px] whitespace-nowrap px-4 text-sm"
                         >
                             Run SLA check
                         </button>
                     )}
                 </div>
             </section>
+
+            {sessionsError && (
+                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                    {sessionsError}
+                </div>
+            )}
+
+            {isDashboardDetailsLoading && (
+                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                    Loading dashboard risk, SLA, and recent activity...
+                </div>
+            )}
+
+            {dashboardDetailsError && (
+                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                    {dashboardDetailsError}
+                </div>
+            )}
+
+            {isOverviewLoading && (
+                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                    Loading dashboard overview...
+                </div>
+            )}
+
+            {overviewError && (
+                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                    {overviewError}
+                </div>
+            )}
 
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {kpiCards.map((card) => {
@@ -264,7 +647,9 @@ const DashboardPage = () => {
                             <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-muted)]">
                                 Matched
                             </p>
-                            <p className="mt-3 text-2xl font-semibold">0</p>
+                            <p className="mt-3 text-2xl font-semibold">
+                                {reconciliationHealth.matched}
+                            </p>
                             <p className="mt-1 text-xs text-[var(--text-muted)]">
                                 Exact and fuzzy matches
                             </p>
@@ -274,7 +659,9 @@ const DashboardPage = () => {
                             <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-muted)]">
                                 Mismatches
                             </p>
-                            <p className="mt-3 text-2xl font-semibold">0</p>
+                            <p className="mt-3 text-2xl font-semibold">
+                                {reconciliationHealth.unmatched}
+                            </p>
                             <p className="mt-1 text-xs text-[var(--text-muted)]">
                                 Amount or time issues
                             </p>
@@ -284,7 +671,9 @@ const DashboardPage = () => {
                             <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-muted)]">
                                 Exceptions
                             </p>
-                            <p className="mt-3 text-2xl font-semibold">0</p>
+                            <p className="mt-3 text-2xl font-semibold">
+                                {reconciliationHealth.exceptions}
+                            </p>
                             <p className="mt-1 text-xs text-[var(--text-muted)]">
                                 Generated for review
                             </p>
@@ -301,7 +690,7 @@ const DashboardPage = () => {
                     </div>
 
                     <div className="grid gap-3 p-5">
-                        {slaRows.map((row) => (
+                        {slaOverviewRows.map((row) => (
                             <div
                                 key={row.label}
                                 className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] px-3 py-3"
@@ -310,6 +699,48 @@ const DashboardPage = () => {
                                 <span className="text-sm font-semibold">
                                     {row.value}
                                 </span>
+                            </div>
+                        ))}
+                    </div>
+                </article>
+            </section>
+
+            <section className="mt-5">
+                <article className="rc-card overflow-hidden">
+                    <div className="border-b border-[var(--border)] p-5">
+                        <h2 className="text-base font-semibold">
+                            Metrics breakdown
+                        </h2>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">
+                            Distribution of transactions, anomalies, and exceptions for the selected scope.
+                        </p>
+                    </div>
+
+                    <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
+                        {metricGroups.map((group) => (
+                            <div
+                                key={group.title}
+                                className="rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] p-4"
+                            >
+                                <h3 className="text-sm font-semibold">
+                                    {group.title}
+                                </h3>
+
+                                <div className="mt-4 grid gap-3">
+                                    {group.rows.map((row) => (
+                                        <div
+                                            key={`${group.title}-${row.label}`}
+                                            className="flex items-center justify-between gap-3"
+                                        >
+                                            <span className="text-sm text-[var(--text-muted)]">
+                                                {row.label}
+                                            </span>
+                                            <span className="text-sm font-semibold">
+                                                {row.value}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -328,7 +759,7 @@ const DashboardPage = () => {
                     </div>
 
                     <div className="divide-y divide-[var(--border)]">
-                        {riskRows.map((row) => (
+                        {riskOverviewRows.map((row) => (
                             <div
                                 key={row.label}
                                 className="flex items-center justify-between gap-4 p-5"
@@ -347,6 +778,46 @@ const DashboardPage = () => {
                                 </span>
                             </div>
                         ))}
+                    </div>
+
+                    <div className="border-t border-[var(--border)] p-5">
+                        <h3 className="text-sm font-semibold">
+                            Top risk anomalies
+                        </h3>
+
+                        <div className="mt-4 grid gap-3">
+                            {topRiskAnomalies.length === 0 ? (
+                                <p className="text-sm text-[var(--text-muted)]">
+                                    No top risk anomalies found.
+                                </p>
+                            ) : (
+                                topRiskAnomalies.slice(0, 3).map((anomaly) => (
+                                    <div
+                                        key={anomaly._id}
+                                        className="rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] p-3"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-medium capitalize">
+                                                    {anomaly.type || 'Anomaly'}
+                                                </p>
+                                                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                                    {getMerchantName(anomaly)}
+                                                </p>
+                                            </div>
+
+                                            <span className="rc-badge rc-badge-strong">
+                                                Risk {anomaly.riskScore ?? 0}
+                                            </span>
+                                        </div>
+
+                                        <p className="mt-2 text-xs capitalize text-[var(--text-muted)]">
+                                            Status: {anomaly.status || '-'}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </article>
 
@@ -375,8 +846,8 @@ const DashboardPage = () => {
                             </thead>
 
                             <tbody>
-                                {activityRows.map((row) => (
-                                    <tr key={row.type}>
+                                {recentActivityRows.map((row) => (
+                                    <tr key={row.id}>
                                         <td className="text-sm">{row.type}</td>
                                         <td className="text-sm text-[var(--text-muted)]">
                                             {row.module}
