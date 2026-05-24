@@ -14,10 +14,6 @@ import {
     getTransactions
 } from '../services/transactionApi.js'
 
-const getResponseData = (response) => {
-    return response?.data || {}
-}
-
 const getSessionsFromResponse = (response) => {
     return response?.data?.sessions || []
 }
@@ -229,11 +225,10 @@ const TransactionsPage = () => {
         })
     }, [transactions, searchQuery])
 
-    const { orderedTransactions, pairStyleById, pairedIds } = useMemo(() => {
+    const { orderedTransactions, pairStyleById } = useMemo(() => {
         const byId = new Map(filteredTransactions.map((t) => [t._id, t]))
         const seen = new Set()
         const ordered = []
-        const pairs = new Set()
         const styleById = {}
         let pairIndex = 0
 
@@ -251,8 +246,6 @@ const TransactionsPage = () => {
                 // mark seen and paired
                 seen.add(t._id)
                 seen.add(matchId)
-                pairs.add(t._id)
-                pairs.add(matchId)
 
                 // alternating opacity per pair (even/odd)
                 const even = pairIndex % 2 === 0
@@ -268,8 +261,7 @@ const TransactionsPage = () => {
 
         return {
             orderedTransactions: ordered,
-            pairStyleById: styleById,
-            pairedIds: pairs
+            pairStyleById: styleById
         }
     }, [filteredTransactions])
 
