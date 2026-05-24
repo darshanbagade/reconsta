@@ -37,46 +37,26 @@ const getSummaryFromResponse = (response) => {
     return response?.data?.summary || {}
 }
 
-const getAllSessionsSummary = (sessions = []) => {
-    return sessions.reduce(
-        (summary, session) => {
+const getAggregatedSessionSummary = (sessionSummaries = []) => {
+    return sessionSummaries.reduce(
+        (total, summary) => {
             return {
                 totalTransactions:
-                    summary.totalTransactions + (session.totalTransactions || 0),
+                    total.totalTransactions + (summary.totalTransactions || 0),
                 bankTransactions:
-                    summary.bankTransactions + (session.bankTransactions || 0),
+                    total.bankTransactions + (summary.bankTransactions || 0),
                 posTransactions:
-                    summary.posTransactions + (session.posTransactions || 0),
-                matched: summary.matched,
-                fuzzy: summary.fuzzy,
-                unmatched: summary.unmatched,
-                unprocessed: summary.unprocessed
+                    total.posTransactions + (summary.posTransactions || 0),
+                matched: total.matched + (summary.matched || 0),
+                fuzzy: total.fuzzy + (summary.fuzzy || 0),
+                unmatched: total.unmatched + (summary.unmatched || 0),
+                unprocessed: total.unprocessed + (summary.unprocessed || 0)
             }
         },
         {
             totalTransactions: 0,
             bankTransactions: 0,
             posTransactions: 0,
-            matched: 0,
-            fuzzy: 0,
-            unmatched: 0,
-            unprocessed: 0
-        }
-    )
-}
-
-const getStatusCountsFromCurrentRows = (transactions = []) => {
-    return transactions.reduce(
-        (counts, transaction) => {
-            const status = transaction.status
-
-            if (status && status in counts) {
-                counts[status] += 1
-            }
-
-            return counts
-        },
-        {
             matched: 0,
             fuzzy: 0,
             unmatched: 0,
@@ -321,16 +301,15 @@ const TransactionsPage = () => {
                     const summaryResponse = await getSessionSummary(selectedSessionId)
                     setSummary(getSummaryFromResponse(summaryResponse))
                 } else {
-                    const statusCounts =
-                        getStatusCountsFromCurrentRows(fetchedTransactions)
+                    const summaryResponses = await Promise.all(
+                        sessions.map((session) => getSessionSummary(session.sessionId))
+                    )
 
-                    setSummary({
-                        ...getAllSessionsSummary(sessions),
-                        matched: statusCounts.matched,
-                        fuzzy: statusCounts.fuzzy,
-                        unmatched: statusCounts.unmatched,
-                        unprocessed: statusCounts.unprocessed
-                    })
+                    const sessionSummaries = summaryResponses.map((summaryResponse) =>
+                        getSummaryFromResponse(summaryResponse)
+                    )
+
+                    setSummary(getAggregatedSessionSummary(sessionSummaries))
                 }
             } catch (transactionError) {
                 setTransactions([])
