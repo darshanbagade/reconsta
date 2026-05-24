@@ -1,11 +1,69 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { LockKeyhole } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 
 const LoginPage = () => {
+    const navigate = useNavigate()
+    const location = useLocation()
+    const { login, isAuthenticated, isCheckingAuth } = useAuth()
 
-    const handleLoginSubmit = (event) => {
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    })
+    const [error, setError] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const redirectPath = location.state?.from || '/dashboard'
+
+    const handleChange = (event) => {
+        const { name, value } = event.target
+
+        setFormData((currentData) => ({
+            ...currentData,
+            [name]: value
+        }))
+
+        if (error) {
+            setError('')
+        }
+    }
+
+    const handleLoginSubmit = async (event) => {
         event.preventDefault()
+
+        if (!formData.email || !formData.password) {
+            setError('Email and password are required')
+            return
+        }
+
+        try {
+            setIsSubmitting(true)
+            setError('')
+
+            const loggedInUser = await login({
+                email: formData.email,
+                password: formData.password
+            })
+
+            if (!loggedInUser) {
+                throw new Error('Invalid email or password')
+            }
+
+            navigate(redirectPath, {
+                replace: true
+            })
+        } catch (loginError) {
+            setError(loginError.message || 'Invalid email or password')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    if (!isCheckingAuth && isAuthenticated) {
+        return <Navigate to="/dashboard" replace />
     }
 
     return (
@@ -70,6 +128,12 @@ const LoginPage = () => {
                             Use your internal account credentials.
                         </p>
 
+                        {error && (
+                            <div className="mt-5 rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] px-3 py-2 text-sm">
+                                {error}
+                            </div>
+                        )}
+
                         <form onSubmit={handleLoginSubmit} className="mt-6 grid gap-4">
                             <div>
                                 <label
@@ -80,9 +144,13 @@ const LoginPage = () => {
                                 </label>
                                 <input
                                     id="email"
+                                    name="email"
                                     type="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
                                     className="rc-input h-11 px-3 text-sm"
                                     placeholder="analyst@reconsta.com"
+                                    autoComplete="email"
                                 />
                             </div>
 
@@ -95,17 +163,22 @@ const LoginPage = () => {
                                 </label>
                                 <input
                                     id="password"
+                                    name="password"
                                     type="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
                                     className="rc-input h-11 px-3 text-sm"
                                     placeholder="Enter password"
+                                    autoComplete="current-password"
                                 />
                             </div>
 
                             <button
                                 type="submit"
-                                className="rc-btn-primary h-11 px-4 text-sm"
+                                disabled={isSubmitting}
+                                className="rc-btn-primary h-11 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70"
                             >
-                                Continue
+                                {isSubmitting ? 'Signing in...' : 'Continue'}
                             </button>
                         </form>
 

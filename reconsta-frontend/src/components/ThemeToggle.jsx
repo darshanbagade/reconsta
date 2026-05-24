@@ -10,6 +10,7 @@ const ThemeToggle = () => {
             onClick={toggleTheme}
             className="rc-btn-secondary h-9 px-3 text-sm"
             aria-label="Toggle theme"
+            title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
         >
             {isDark ? <Sun size={15} /> : <Moon size={15} />}
             <span>{isDark ? 'Light' : 'Dark'}</span>
