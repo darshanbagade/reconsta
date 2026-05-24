@@ -22,10 +22,9 @@ apiClient.interceptors.response.use(
             error.message ||
             'Something went wrong'
 
-        return Promise.reject({
-            ...error,
-            message
-        })
+        error.message = message
+
+        return Promise.reject(error)
     }
 )
 

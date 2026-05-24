@@ -44,8 +44,13 @@ const AuthProvider = ({ children }) => {
     }, [])
 
     useEffect(() => {
+        refreshUser()
+    }, [refreshUser])
+
+    useEffect(() => {
         const handleUnauthorized = () => {
             setUser(null)
+            setIsCheckingAuth(false)
         }
 
         window.addEventListener('reconsta:unauthorized', handleUnauthorized)
@@ -55,40 +60,43 @@ const AuthProvider = ({ children }) => {
         }
     }, [])
 
-    useEffect(() => {
-        refreshUser()
-    }, [refreshUser])
+    const login = useCallback(
+        async ({ email, password }) => {
+            const response = await loginUser({
+                email,
+                password
+            })
 
-    const login = async ({ email, password }) => {
-        const response = await loginUser({
-            email,
-            password
-        })
+            if (!response?.success) {
+                throw new Error(response?.message || 'Login failed')
+            }
 
-        if (!response?.success) {
-            throw new Error(response?.message || 'Login failed')
+            const loggedInUser = extractUserFromResponse(response)
+
+            if (loggedInUser) {
+                setUser(loggedInUser)
+                return loggedInUser
+            }
+
+            const currentUser = await refreshUser()
+
+            if (!currentUser) {
+                throw new Error('Login failed. User session was not created.')
+            }
+
+            return currentUser
+        },
+        [refreshUser]
+    )
+
+    const logout = useCallback(async () => {
+        try {
+            await logoutUser()
+        } finally {
+            setUser(null)
+            setIsCheckingAuth(false)
         }
-
-        const loggedInUser = extractUserFromResponse(response)
-
-        if (loggedInUser) {
-            setUser(loggedInUser)
-            return loggedInUser
-        }
-
-        const currentUser = await refreshUser()
-
-        if (!currentUser) {
-            throw new Error('Login failed. User session was not created.')
-        }
-
-        return currentUser
-    }
-
-    const logout = async () => {
-        await logoutUser()
-        setUser(null)
-    }
+    }, [])
 
     const value = useMemo(() => {
         return {
@@ -99,7 +107,7 @@ const AuthProvider = ({ children }) => {
             logout,
             refreshUser
         }
-    }, [user, isCheckingAuth, refreshUser])
+    }, [user, isCheckingAuth, login, logout, refreshUser])
 
     return (
         <AuthContext.Provider value={value}>

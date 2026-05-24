@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { LockKeyhole } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 const LoginPage = () => {
     const navigate = useNavigate()
     const location = useLocation()
-    const { login, isAuthenticated } = useAuth()
+    const { login, isAuthenticated, isCheckingAuth } = useAuth()
 
     const [formData, setFormData] = useState({
         email: '',
@@ -62,10 +62,8 @@ const LoginPage = () => {
         }
     }
 
-    if (isAuthenticated) {
-        navigate('/dashboard', {
-            replace: true
-        })
+    if (!isCheckingAuth && isAuthenticated) {
+        return <Navigate to="/dashboard" replace />
     }
 
     return (
