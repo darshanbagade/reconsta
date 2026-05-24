@@ -57,7 +57,7 @@ const FileInputCard = ({ title, description, file, onChange }) => {
                 <input
                     type="file"
                     accept=".csv,text/csv"
-                    className="hidden"
+                    className="sr-only"
                     onChange={onChange}
                 />
             </label>
