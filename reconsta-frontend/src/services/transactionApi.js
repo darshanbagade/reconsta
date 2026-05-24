@@ -12,11 +12,7 @@ const uploadTransactionFiles = async ({ bankFile, posFile }) => {
     formData.append('bankFile', bankFile)
     formData.append('posFile', posFile)
 
-    const response = await apiClient.post('/api/transactions/upload', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    })
+    const response = await apiClient.post('/api/transactions/upload', formData)
 
     return response.data
 }
