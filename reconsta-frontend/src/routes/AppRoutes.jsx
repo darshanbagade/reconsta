@@ -4,6 +4,7 @@ import LoginPage from '../pages/LoginPage.jsx'
 import DashboardPage from '../pages/DashboardPage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
+import UploadPage from '../pages/UploadPage.jsx'
 
 const AppRoutes = () => {
     return (
@@ -23,6 +24,16 @@ const AppRoutes = () => {
 
             <Route path="/home" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFoundPage />} />
+        
+            <Route
+                path="/upload"
+                element={
+                    <ProtectedRoute>
+                        <UploadPage />
+                    </ProtectedRoute>
+                }
+            />
+            
         </Routes>
     )
 }
