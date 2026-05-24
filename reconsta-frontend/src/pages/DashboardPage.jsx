@@ -371,6 +371,7 @@ const DashboardPage = () => {
             }
 
             try {
+                setHasLoadedSessions(false)
                 setIsSessionsLoading(true)
                 setSessionsError('')
 
