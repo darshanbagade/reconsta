@@ -249,7 +249,6 @@ const getTransactionSessions = async (req, res, next) => {
 const getSessionSummary = async (req, res, next) => {
     try {
         const { sessionId } = req.params
-        console.log('Requested sessionId:', sessionId)
         const summary = await Transaction.aggregate([
             {
                 $match: {
@@ -306,7 +305,6 @@ const getSessionSummary = async (req, res, next) => {
                 }
             }
         ])
-        console.log('Summary result:', summary)
 
         if (!summary.length) {
             throw new ApiError(404, 'Session not found')
