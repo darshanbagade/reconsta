@@ -6,6 +6,7 @@ import NotFoundPage from '../pages/NotFoundPage.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import UploadPage from '../pages/UploadPage.jsx'
 import TransactionsPage from '../pages/TransactionsPage.jsx'
+import AnomaliesPage from '../pages/AnomaliesPage.jsx'
 
 const AppRoutes = () => {
     return (
@@ -40,6 +41,15 @@ const AppRoutes = () => {
                 element={
                     <ProtectedRoute>
                         <TransactionsPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/anomalies"
+                element={
+                    <ProtectedRoute>
+                        <AnomaliesPage />
                     </ProtectedRoute>
                 }
             />
