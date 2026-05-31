@@ -323,9 +323,12 @@ const getSessionSummary = async (req, res, next) => {
 //delete the transactions according to the session Id
 // Along with the deletion of the transaction , it also deletes the anomaly and exception related to that transaction 
 const deleteTransactionSession = async (req, res, next) => {
-    const mongoSession = await mongoose.startSession()
+    let mongoSession;
 
     try {
+
+        mongoSession = await mongoose.startSession()
+
         const { sessionId } = req.params
 
         if (!sessionId || !sessionId.startsWith('REC_')) {
@@ -387,7 +390,9 @@ const deleteTransactionSession = async (req, res, next) => {
     } catch (error) {
         next(error)
     } finally {
-        await mongoSession.endSession()
+        if (mongoSession) {
+            await mongoSession.endSession()
+        }
     }
 }
 

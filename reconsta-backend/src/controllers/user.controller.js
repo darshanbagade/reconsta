@@ -1,8 +1,42 @@
+import mongoose from 'mongoose'
 import User from '../models/User.model.js'
 import ApiError from '../utils/ApiError.js'
 import sendSuccess from '../utils/responseFormatter.js'
 
 const ALLOWED_ROLES = ['analyst', 'supervisor', 'admin']
+
+const escapeRegex = (value = '') => {
+    return String(value)
+        .trim()
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+const validateUserId = (id) => {
+    if (!mongoose.isValidObjectId(id)) {
+        throw new ApiError(400, 'Invalid user id')
+    }
+}
+
+const validatePagination = (page, limit) => {
+    const pageNumber = Number(page)
+    const limitNumber = Number(limit)
+
+    if (
+        !Number.isFinite(pageNumber) ||
+        !Number.isFinite(limitNumber) ||
+        !Number.isInteger(pageNumber) ||
+        !Number.isInteger(limitNumber) ||
+        pageNumber < 1 ||
+        limitNumber < 1
+    ) {
+        throw new ApiError(400, 'Page and limit must be valid positive integers')
+    }
+
+    return {
+        pageNumber,
+        limitNumber: Math.min(limitNumber, 100)
+    }
+}
 
 const getUsers = async (req, res, next) => {
     try {
@@ -47,26 +81,20 @@ const getUsers = async (req, res, next) => {
         }
 
         if (search) {
-            filter.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } }
-            ]
+            const escapedSearch = escapeRegex(search)
+
+            if (escapedSearch) {
+                filter.$or = [
+                    { name: { $regex: escapedSearch, $options: 'i' } },
+                    { email: { $regex: escapedSearch, $options: 'i' } }
+                ]
+            }
         }
 
-        const pageNumber = Number(page)
-        const limitNumber = Number(limit)
+        const { pageNumber, limitNumber } = validatePagination(page, limit)
+        const skip = (pageNumber - 1) * limitNumber      
 
-        if (
-            Number.isNaN(pageNumber) ||
-            Number.isNaN(limitNumber) ||
-            pageNumber < 1 ||
-            limitNumber < 1
-        ) {
-            throw new ApiError(400, 'Page and limit must be valid positive numbers')
-        }
-
-        const skip = (pageNumber - 1) * limitNumber
-        let users = await User.find(filter)
+        const users = await User.find(filter)
         .select('_id name email role isActive createdAt updatedAt')
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -94,12 +122,22 @@ const getUserById = async (req, res, next) => {
     try {
         const { id } = req.params
 
+        validateUserId(id)
+
+        const requesterRole = String(req.user?.role || '').trim().toLowerCase()
+
         const user = await User.findById(id)
             .select('_id name email role isActive createdAt updatedAt')
             .lean()
 
         if (!user) {
             throw new ApiError(404, 'User not found')
+        }
+
+        const targetRole = String(user.role || '').trim().toLowerCase()
+
+        if (requesterRole === 'supervisor' && targetRole === 'admin') {
+            throw new ApiError(403, 'Supervisor cannot view admin users')
         }
 
         return sendSuccess(res, 200, 'User fetched successfully', {
@@ -114,7 +152,9 @@ const updateUserStatus = async (req, res, next) => {
     try {
         const { id } = req.params
         const { isActive } = req.body
-
+        
+        validateUserId(id)
+        
         if (typeof isActive !== 'boolean') {
             throw new ApiError(400, 'isActive must be a boolean value')
         }
@@ -148,7 +188,9 @@ const updateUserRole = async (req, res, next) => {
     try {
         const { id } = req.params
         const { role } = req.body
-
+        
+        validateUserId(id)
+        
         if (!ALLOWED_ROLES.includes(role)) {
             throw new ApiError(400, 'Invalid user role')
         }
