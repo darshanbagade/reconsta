@@ -21,14 +21,14 @@ const getAnomaliesFromResponse = (response) => {
 }
 
 const getPaginationFromResponse = (response) => {
-    return (
-        response?.data?.pagination || {
-            totalAnomalies: 0,
-            currentPage: 1,
-            totalPages: 1,
-            limit: 20
-        }
-    )
+    const pagination = response?.data?.pagination || {}
+
+    return {
+        totalAnomalies: pagination.totalAnomalies || 0,
+        currentPage: Math.max(1, pagination.currentPage || 1),
+        totalPages: Math.max(1, pagination.totalPages || 1),
+        limit: pagination.limit || 20
+    }
 }
 
 const formatSessionDate = (dateValue) => {
@@ -271,6 +271,8 @@ const AnomaliesPage = () => {
 
                 const response = await getAnomalies({
                     sessionId: selectedSessionId,
+                    status: statusFilter,
+                    type: typeFilter,
                     page,
                     limit
                 })
@@ -286,7 +288,7 @@ const AnomaliesPage = () => {
         }
 
         fetchAnomalies()
-    }, [selectedSessionId, page, limit])
+    }, [selectedSessionId, statusFilter, typeFilter, page, limit])
 
     const handleSessionChange = (event) => {
         setSelectedSessionId(event.target.value)
@@ -444,7 +446,10 @@ const AnomaliesPage = () => {
 
                     <select
                         value={typeFilter}
-                        onChange={(event) => setTypeFilter(event.target.value)}
+                        onChange={(event) => {
+                            setTypeFilter(event.target.value)
+                            setPage(1)
+                        }}
                         className="rc-input h-10 px-3 text-sm"
                     >
                         <option value="">All types</option>
@@ -456,7 +461,10 @@ const AnomaliesPage = () => {
 
                     <select
                         value={statusFilter}
-                        onChange={(event) => setStatusFilter(event.target.value)}
+                        onChange={(event) => {
+                            setStatusFilter(event.target.value)
+                            setPage(1)
+                        }}
                         className="rc-input h-10 px-3 text-sm"
                     >
                         <option value="">All statuses</option>
@@ -467,7 +475,10 @@ const AnomaliesPage = () => {
 
                     <select
                         value={riskFilter}
-                        onChange={(event) => setRiskFilter(event.target.value)}
+                        onChange={(event) => {
+                            setRiskFilter(event.target.value)
+                            setPage(1)
+                        }}
                         className="rc-input h-10 px-3 text-sm"
                     >
                         <option value="">All risks</option>
@@ -505,7 +516,8 @@ const AnomaliesPage = () => {
                         </h2>
                         <p className="mt-1 text-sm text-[var(--text-muted)]">
                             Showing {filteredAnomalies.length} of{' '}
-                            {pagination.totalAnomalies || 0} anomalies.
+                            {anomalies.length} on this page ·{' '}
+                            {pagination.totalAnomalies || 0} total anomalies.
                         </p>
                     </div>
 
