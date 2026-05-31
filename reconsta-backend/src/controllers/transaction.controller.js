@@ -1,4 +1,6 @@
 import Transaction from '../models/Transaction.model.js'
+import Anomaly from '../models/Anomaly.model.js'
+import Exception from '../models/Exception.model.js'
 import parseCsvBuffer from '../utils/csvParser.js'
 import sendSuccess from '../utils/responseFormatter.js'
 import ApiError from '../utils/ApiError.js'
@@ -249,7 +251,6 @@ const getTransactionSessions = async (req, res, next) => {
 const getSessionSummary = async (req, res, next) => {
     try {
         const { sessionId } = req.params
-        console.log('Requested sessionId:', sessionId)
         const summary = await Transaction.aggregate([
             {
                 $match: {
@@ -306,7 +307,6 @@ const getSessionSummary = async (req, res, next) => {
                 }
             }
         ])
-        console.log('Summary result:', summary)
 
         if (!summary.length) {
             throw new ApiError(404, 'Session not found')
@@ -320,10 +320,82 @@ const getSessionSummary = async (req, res, next) => {
     }
 }
 
+//delete the transactions according to the session Id
+// Along with the deletion of the transaction , it also deletes the anomaly and exception related to that transaction 
+const deleteTransactionSession = async (req, res, next) => {
+    const mongoSession = await mongoose.startSession()
+
+    try {
+        const { sessionId } = req.params
+
+        if (!sessionId || !sessionId.startsWith('REC_')) {
+            throw new ApiError(400, 'Valid sessionId is required')
+        }
+
+        const transactionCount = await Transaction.countDocuments({ sessionId })
+        const anomalyIds = await Anomaly.distinct('_id', { sessionId })
+
+        if (transactionCount === 0 && anomalyIds.length === 0) {
+            throw new ApiError(404, 'Transaction session not found')
+        }
+
+        let deletedTransactions = 0
+        let deletedAnomalies = 0
+        let deletedExceptions = 0
+
+        await mongoSession.withTransaction(async () => {
+            const exceptionDeleteResult = await Exception.deleteMany(
+                {
+                    anomalyId: {
+                        $in: anomalyIds
+                    }
+                },
+                {
+                    session: mongoSession
+                }
+            )
+
+            const anomalyDeleteResult = await Anomaly.deleteMany(
+                {
+                    sessionId
+                },
+                {
+                    session: mongoSession
+                }
+            )
+
+            const transactionDeleteResult = await Transaction.deleteMany(
+                {
+                    sessionId
+                },
+                {
+                    session: mongoSession
+                }
+            )
+
+            deletedExceptions = exceptionDeleteResult.deletedCount || 0
+            deletedAnomalies = anomalyDeleteResult.deletedCount || 0
+            deletedTransactions = transactionDeleteResult.deletedCount || 0
+        })
+
+        return sendSuccess(res, 200, 'Transaction session deleted successfully', {
+            sessionId,
+            deletedTransactions,
+            deletedAnomalies,
+            deletedExceptions
+        })
+    } catch (error) {
+        next(error)
+    } finally {
+        await mongoSession.endSession()
+    }
+}
+
 export {
     uploadTransaction,
     getTransactions,
     getTransactionById,
     getTransactionSessions,
-    getSessionSummary
+    getSessionSummary,
+    deleteTransactionSession
 }

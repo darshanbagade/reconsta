@@ -12,6 +12,7 @@ import slaRouter from './routes/sla.routes.js'
 import reconciliationRouter from './routes/reconciliation.routes.js' 
 import dashboardRouter from './routes/dashboard.routes.js'
 import insightRouter from './routes/insight.routes.js'
+import userRouter from './routes/user.routes.js';
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/sla', slaRouter)
 app.use('/api/reconciliation', reconciliationRouter)
 app.use('/api/dashboard', dashboardRouter)
 app.use('/api/insights', insightRouter)
+app.use('/api/users/',userRouter)
 
 // errorHandler will be called if an error occurs in routes/controllers/middleware
 app.use(errorHandler);
