@@ -2,6 +2,8 @@ import apiClient from './apiClient'
 
 const getAnomalies = async ({
     sessionId = '',
+    status = '',
+    type = '',
     page = 1,
     limit = 20
 } = {}) => {
@@ -12,6 +14,14 @@ const getAnomalies = async ({
 
     if (sessionId) {
         params.sessionId = sessionId
+    }
+
+    if (status) {
+        params.status = status
+    }
+
+    if (type) {
+        params.type = type
     }
 
     const response = await apiClient.get('/api/anomalies', {
