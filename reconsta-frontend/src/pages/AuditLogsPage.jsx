@@ -330,7 +330,7 @@ const AuditLogsPage = () => {
                         <option value="assigned">Assigned</option>
                         <option value="resolved">Resolved</option>
                         <option value="escalated">Escalated</option>
-                        <option value="open">Open</option>
+                        <option value="note_added">Note added</option>
                     </select>
 
                     <div className="flex h-10 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3">
