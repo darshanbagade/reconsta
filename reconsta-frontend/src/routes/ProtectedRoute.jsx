@@ -1,20 +1,19 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import LoadingState from '../components/LoadingState.jsx'
+import PageAccessDenied from '../components/PageAccessDenied.jsx'
 
-const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated, isCheckingAuth } = useAuth()
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+    const { isAuthenticated, isCheckingAuth, user } = useAuth()
     const location = useLocation()
 
     if (isCheckingAuth) {
         return (
-            <main className="flex min-h-screen items-center justify-center bg-[var(--bg-main)] text-[var(--text-main)]">
-                <div className="rc-card p-6 text-center">
-                    <p className="text-sm font-semibold">Checking session</p>
-                    <p className="mt-2 text-sm text-[var(--text-muted)]">
-                        Please wait while we verify your access.
-                    </p>
-                </div>
-            </main>
+            <LoadingState
+                title="Checking session"
+                message="Verifying your access and permissions."
+                fullScreen
+            />
         )
     }
 
@@ -28,6 +27,10 @@ const ProtectedRoute = ({ children }) => {
                 }}
             />
         )
+    }
+
+    if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+        return <PageAccessDenied />
     }
 
     return children

@@ -13,29 +13,29 @@ import UserManagementPage from '../pages/UserManagementPage.jsx'
 import SessionManagementPage from '../pages/SessionManagementPage.jsx'
 import AuditLogsPage from '../pages/AuditLogsPage.jsx'
 
+const ALL_ROLES = ['admin', 'supervisor', 'analyst']
+const OPS_ROLES = ['admin', 'supervisor']
+
 const AppRoutes = () => {
     return (
         <Routes>
             <Route path="/" element={<HomePage />} />
-
+            <Route path="/home" element={<Navigate to="/" replace />} />
             <Route path="/login" element={<LoginPage />} />
 
             <Route
                 path="/dashboard"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={ALL_ROLES}>
                         <DashboardPage />
                     </ProtectedRoute>
                 }
             />
 
-            <Route path="/home" element={<Navigate to="/" replace />} />
-            <Route path="*" element={<NotFoundPage />} />
-        
             <Route
                 path="/upload"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={OPS_ROLES}>
                         <UploadPage />
                     </ProtectedRoute>
                 }
@@ -44,7 +44,7 @@ const AppRoutes = () => {
             <Route
                 path="/transactions"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={ALL_ROLES}>
                         <TransactionsPage />
                     </ProtectedRoute>
                 }
@@ -53,7 +53,7 @@ const AppRoutes = () => {
             <Route
                 path="/anomalies"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={ALL_ROLES}>
                         <AnomaliesPage />
                     </ProtectedRoute>
                 }
@@ -62,7 +62,7 @@ const AppRoutes = () => {
             <Route
                 path="/exceptions"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={ALL_ROLES}>
                         <ExceptionsPage />
                     </ProtectedRoute>
                 }
@@ -71,15 +71,16 @@ const AppRoutes = () => {
             <Route
                 path="/exceptions/:exceptionId/work"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={ALL_ROLES}>
                         <ExceptionWorkPage />
                     </ProtectedRoute>
                 }
             />
+
             <Route
                 path="/users"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={OPS_ROLES}>
                         <UserManagementPage />
                     </ProtectedRoute>
                 }
@@ -88,20 +89,22 @@ const AppRoutes = () => {
             <Route
                 path="/sessions"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={OPS_ROLES}>
                         <SessionManagementPage />
                     </ProtectedRoute>
                 }
             />
-            
+
             <Route
                 path="/audit-logs"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={OPS_ROLES}>
                         <AuditLogsPage />
                     </ProtectedRoute>
                 }
             />
+
+            <Route path="*" element={<NotFoundPage />} />
         </Routes>
     )
 }
