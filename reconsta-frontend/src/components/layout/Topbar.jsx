@@ -9,6 +9,7 @@ const Topbar = ({
     pageTitle = 'Dashboard',
     pageSubtitle = 'Operations overview',
     isMobileViewport = false,
+    isMobileSidebarOpen = false,
     isDesktopSidebarCollapsed = false,
     onOpenMobileSidebar,
     onToggleDesktopSidebar
@@ -39,13 +40,18 @@ const Topbar = ({
                         isMobileViewport
                             ? 'Open menu'
                             : isDesktopSidebarCollapsed
-                              ? 'Expand sidebar'
-                              : 'Collapse sidebar'
+                            ? 'Expand sidebar'
+                            : 'Collapse sidebar'
                     }
+                    aria-expanded={
+                        isMobileViewport
+                            ? isMobileSidebarOpen
+                            : !isDesktopSidebarCollapsed
+                    }
+                    aria-controls={isMobileViewport ? 'mobile-sidebar' : 'desktop-sidebar'}
                 >
                     <ToggleIcon size={16} />
                 </button>
-
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{pageTitle}</p>
                     <p className="truncate text-xs text-[var(--text-muted)]">

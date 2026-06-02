@@ -130,13 +130,12 @@ const TransactionsPage = () => {
 
                 setSessions(fetchedSessions)
 
-                if (
-                    initialSessionId &&
-                    fetchedSessions.some(
+                if (initialSessionId) {
+                    const sessionExists = fetchedSessions.some(
                         (session) => session.sessionId === initialSessionId
                     )
-                ) {
-                    setSelectedSessionId(initialSessionId)
+
+                    setSelectedSessionId(sessionExists ? initialSessionId : '')
                 }
             } catch (sessionError) {
                 setError(sessionError.message || 'Failed to load sessions')

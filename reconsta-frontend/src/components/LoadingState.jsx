@@ -4,8 +4,15 @@ const LoadingState = ({
     fullScreen = false
 }) => {
     const content = (
-        <div className="flex flex-col items-center text-center">
-            <div className="h-9 w-9 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--text-main)]" />
+        <div
+            role="status"
+            aria-live="polite"
+            className="flex flex-col items-center text-center"
+        >
+            <div
+                aria-hidden="true"
+                className="h-9 w-9 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--text-main)]"
+            />
 
             <h2 className="mt-4 text-sm font-semibold">{title}</h2>
 
