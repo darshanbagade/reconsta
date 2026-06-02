@@ -292,8 +292,8 @@ const ExceptionWorkPage = () => {
             return
         }
 
-        if (isResolved) {
-            setError('Resolved exceptions cannot be assigned again.')
+        if (exception.status !== 'open') {
+            setError('Only open exceptions can be assigned.')
             return
         }
 
