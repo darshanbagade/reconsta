@@ -5,7 +5,6 @@ import {
     ArrowLeft,
     Bot,
     ClipboardCheck,
-    Clock3,
     GitCompareArrows,
     UserCheck
 } from 'lucide-react'
