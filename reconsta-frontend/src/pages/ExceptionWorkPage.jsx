@@ -374,8 +374,8 @@ const ExceptionWorkPage = () => {
             return
         }
 
-        if (isResolved) {
-            setError('Resolved exceptions cannot be escalated.')
+        if (exception.status !== 'open') {
+            setError('Only open exceptions can be escalated.')
             return
         }
 
