@@ -9,6 +9,7 @@ import TransactionsPage from '../pages/TransactionsPage.jsx'
 import AnomaliesPage from '../pages/AnomaliesPage.jsx'
 import ExceptionsPage from '../pages/ExceptionsPage.jsx'
 import ExceptionWorkPage from '../pages/ExceptionWorkPage.jsx'
+import UserManagementPage from '../pages/UserManagementPage.jsx'
 
 const AppRoutes = () => {
     return (
@@ -73,7 +74,14 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
-
+            <Route
+                path="/users"
+                element={
+                    <ProtectedRoute>
+                        <UserManagementPage />
+                    </ProtectedRoute>
+                }
+            />
         </Routes>
     )
 }
