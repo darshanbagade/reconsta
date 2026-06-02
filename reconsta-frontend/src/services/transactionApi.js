@@ -62,10 +62,19 @@ const uploadTransactionFiles = async ({ bankFile, posFile }) => {
     return response.data
 }
 
+const deleteTransactionSession = async (sessionId) => {
+    const response = await apiClient.delete(
+        `/api/transactions/session/${sessionId}`
+    )
+
+    return response.data
+}
+
 export {
     getTransactionSessions,
     getTransactions,
     getTransactionById,
     getSessionSummary,
-    uploadTransactionFiles
+    uploadTransactionFiles,
+    deleteTransactionSession
 }

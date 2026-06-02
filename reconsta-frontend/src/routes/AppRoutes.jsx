@@ -10,6 +10,7 @@ import AnomaliesPage from '../pages/AnomaliesPage.jsx'
 import ExceptionsPage from '../pages/ExceptionsPage.jsx'
 import ExceptionWorkPage from '../pages/ExceptionWorkPage.jsx'
 import UserManagementPage from '../pages/UserManagementPage.jsx'
+import SessionManagementPage from '../pages/SessionManagementPage.jsx'
 
 const AppRoutes = () => {
     return (
@@ -82,6 +83,16 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
+
+            <Route
+                path="/sessions"
+                element={
+                    <ProtectedRoute>
+                        <SessionManagementPage />
+                    </ProtectedRoute>
+                }
+            />
+
         </Routes>
     )
 }

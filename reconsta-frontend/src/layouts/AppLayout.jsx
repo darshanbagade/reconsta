@@ -73,6 +73,12 @@ const getNavigationItems = (role) => {
             roles: ['admin', 'supervisor', 'analyst']
         },
         {
+            label: 'Sessions',
+            path: '/sessions',
+            icon: Database,
+            roles: ['admin', 'supervisor']
+        },
+        {
             label: 'User Management',
             path: '/users',
             icon: Users,
