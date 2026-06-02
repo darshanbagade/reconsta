@@ -11,6 +11,7 @@ import ExceptionsPage from '../pages/ExceptionsPage.jsx'
 import ExceptionWorkPage from '../pages/ExceptionWorkPage.jsx'
 import UserManagementPage from '../pages/UserManagementPage.jsx'
 import SessionManagementPage from '../pages/SessionManagementPage.jsx'
+import AuditLogsPage from '../pages/AuditLogsPage.jsx'
 
 const AppRoutes = () => {
     return (
@@ -92,7 +93,15 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
-
+            
+            <Route
+                path="/audit-logs"
+                element={
+                    <ProtectedRoute>
+                        <AuditLogsPage />
+                    </ProtectedRoute>
+                }
+            />
         </Routes>
     )
 }
