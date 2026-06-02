@@ -98,6 +98,7 @@ const UserManagementPage = () => {
     const [roleFilter, setRoleFilter] = useState('')
     const [activeFilter, setActiveFilter] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
+    const [submittedSearch, setSubmittedSearch] = useState('')
     const [page, setPage] = useState(1)
     const [limit, setLimit] = useState(20)
 
@@ -157,7 +158,7 @@ const UserManagementPage = () => {
             const response = await getUsers({
                 role: roleFilter,
                 isActive: activeFilter,
-                search: searchQuery,
+                search: submittedSearch,
                 page,
                 limit
             })
@@ -175,18 +176,20 @@ const UserManagementPage = () => {
     useEffect(() => {
         fetchUsers()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [roleFilter, activeFilter, page, limit])
+    }, [roleFilter, activeFilter, submittedSearch, page, limit])
 
     const handleSearchSubmit = (event) => {
         event.preventDefault()
+
+        setSubmittedSearch(searchQuery.trim())
         setPage(1)
-        fetchUsers()
     }
 
     const handleClearFilters = () => {
         setRoleFilter('')
         setActiveFilter('')
         setSearchQuery('')
+        setSubmittedSearch('')
         setPage(1)
     }
 
