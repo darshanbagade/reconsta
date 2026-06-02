@@ -5,7 +5,7 @@ const getUsers = async ({
     isActive = '',
     search = '',
     page = 1,
-    limit = 100
+    limit = 20
 } = {}) => {
     const params = {
         page,
@@ -31,6 +31,36 @@ const getUsers = async ({
     return response.data
 }
 
+const createUser = async ({ name, email, password, role }) => {
+    const response = await apiClient.post('/api/auth/register', {
+        name,
+        email,
+        password,
+        role
+    })
+
+    return response.data
+}
+
+const updateUserStatus = async ({ userId, isActive }) => {
+    const response = await apiClient.patch(`/api/users/${userId}/status`, {
+        isActive
+    })
+
+    return response.data
+}
+
+const updateUserRole = async ({ userId, role }) => {
+    const response = await apiClient.patch(`/api/users/${userId}/role`, {
+        role
+    })
+
+    return response.data
+}
+
 export {
-    getUsers
+    getUsers,
+    createUser,
+    updateUserStatus,
+    updateUserRole
 }
