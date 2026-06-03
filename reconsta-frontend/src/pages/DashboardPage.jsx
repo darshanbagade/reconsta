@@ -1,82 +1,38 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
     AlertTriangle,
-    Bot,
     CheckCircle2,
     Clock3,
     Database,
-    GitCompareArrows,
-    ListChecks,
-    ShieldCheck
+    ListChecks
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import AppLayout from '../layouts/AppLayout.jsx'
+import LoadingState from '../components/LoadingState.jsx'
+import KpiCard from '../components/dashboard/KpiCard.jsx'
+import RiskSummary from '../components/dashboard/RiskSummary.jsx'
+import SlaSummary from '../components/dashboard/SlaSummary.jsx'
+import RecentActivity from '../components/dashboard/RecentActivity.jsx'
 import {
-    getDashboardOverview,
     getDashboardMetrics,
+    getDashboardOverview,
+    getDashboardRecent,
     getDashboardRisk,
-    getDashboardSla,
-    getDashboardRecent
+    getDashboardSla
 } from '../services/dashboardApi.js'
 import { getTransactionSessions } from '../services/transactionApi.js'
 
-const getResponseData = (response) => {
-    return response?.data || {}
+const getSessionsFromResponse = (response) => {
+    return response?.data?.sessions || []
 }
 
-const getNumber = (...values) => {
-    const validValue = values.find(
-        (value) => typeof value === 'number' && !Number.isNaN(value)
-    )
-
-    return validValue ?? 0
+const getNumber = (value) => {
+    return typeof value === 'number' && !Number.isNaN(value) ? value : 0
 }
 
-const formatMetricLabel = (key = '') => {
-    return key
-        .replaceAll('_', ' ')
-        .replace(/([A-Z])/g, ' $1')
-        .trim()
-        .replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
-const objectToMetricRows = (metricObject = {}) => {
-    const entries = Object.entries(metricObject)
-
-    if (entries.length === 0) {
-        return [
-            {
-                label: 'No data',
-                value: 0
-            }
-        ]
-    }
-
-    return entries.map(([key, value]) => ({
-        label: formatMetricLabel(key),
-        value: getNumber(value)
-    }))
-}
-
-const getMetricGroups = (metricsData = {}) => {
-    return [
-        {
-            title: 'Transactions by status',
-            rows: objectToMetricRows(metricsData.transactionsByStatus)
-        },
-        {
-            title: 'Transactions by source',
-            rows: objectToMetricRows(metricsData.transactionsBySource)
-        },
-        {
-            title: 'Anomalies by type',
-            rows: objectToMetricRows(metricsData.anomaliesByType)
-        },
-        {
-            title: 'Exceptions by priority',
-            rows: objectToMetricRows(metricsData.exceptionsByPriority)
-        }
-    ]
+const hasRole = (userRole, allowedRoles = []) => {
+    return allowedRoles.includes(userRole)
 }
 
 const formatDateTime = (dateValue) => {
@@ -91,20 +47,6 @@ const formatDateTime = (dateValue) => {
         hour: '2-digit',
         minute: '2-digit'
     }).format(new Date(dateValue))
-}
-
-const getMerchantName = (anomaly) => {
-    return (
-        anomaly?.bankTxnId?.merchantName ||
-        anomaly?.posTxnId?.merchantName ||
-        anomaly?.anomalyId?.bankTxnId?.merchantName ||
-        anomaly?.anomalyId?.posTxnId?.merchantName ||
-        '-'
-    )
-}
-
-const getSessionsFromResponse = (response) => {
-    return response?.data?.sessions || []
 }
 
 const formatSessionDate = (dateValue) => {
@@ -126,73 +68,24 @@ const getSessionDisplayName = (session) => {
         return 'Unknown session'
     }
 
-    const uploadedDate = formatSessionDate(session.uploadedAt)
-
-    return `Batch ${uploadedDate} · ${session.totalTransactions || 0} txns`
+    return `Batch ${formatSessionDate(session.uploadedAt)} · ${
+        session.totalTransactions || 0
+    } txns`
 }
 
-const getRiskRows = (riskData = {}) => {
-    const buckets = riskData.riskBuckets || {}
-
-    return [
-        {
-            label: 'Critical risk',
-            value: getNumber(buckets.critical),
-            note: 'Highest priority anomalies'
-        },
-        {
-            label: 'High risk',
-            value: getNumber(buckets.high),
-            note: 'Needs supervisor attention'
-        },
-        {
-            label: 'Medium risk',
-            value: getNumber(buckets.medium),
-            note: 'Review required'
-        },
-        {
-            label: 'Low risk',
-            value: getNumber(buckets.low),
-            note: 'Monitor only'
-        }
-    ]
-}
-
-const getSlaRows = (slaData = {}) => {
-    const summary = slaData.summary || {}
-
-    return [
-        {
-            label: 'On track',
-            value: getNumber(summary.onTrack)
-        },
-        {
-            label: 'At risk',
-            value: getNumber(summary.atRisk)
-        },
-        {
-            label: 'Breached',
-            value: getNumber(summary.breached)
-        },
-        {
-            label: 'Escalated',
-            value: getNumber(summary.escalated)
-        }
-    ]
+const getMerchantName = (anomaly) => {
+    return (
+        anomaly?.bankTxnId?.merchantName ||
+        anomaly?.posTxnId?.merchantName ||
+        anomaly?.anomalyId?.bankTxnId?.merchantName ||
+        anomaly?.anomalyId?.posTxnId?.merchantName ||
+        '-'
+    )
 }
 
 const getRecentActivityRows = (recentData = {}) => {
     const recentAnomalies = recentData.recentAnomalies || []
     const recentExceptions = recentData.recentExceptions || []
-
-    const anomalyRows = recentAnomalies.map((anomaly) => ({
-        id: `anomaly-${anomaly._id}`,
-        type: `${anomaly.type || 'Anomaly'} anomaly`,
-        module: 'Anomaly',
-        status: anomaly.status || '-',
-        owner: getMerchantName(anomaly),
-        time: formatDateTime(anomaly.detectedAt || anomaly.createdAt)
-    }))
 
     const exceptionRows = recentExceptions.map((exception) => ({
         id: `exception-${exception._id}`,
@@ -206,782 +99,429 @@ const getRecentActivityRows = (recentData = {}) => {
         time: formatDateTime(exception.updatedAt || exception.createdAt)
     }))
 
-    const rows = [...exceptionRows, ...anomalyRows]
+    const anomalyRows = recentAnomalies.map((anomaly) => ({
+        id: `anomaly-${anomaly._id}`,
+        type: `${anomaly.type || 'Anomaly'} anomaly`,
+        module: 'Anomaly',
+        status: anomaly.status || '-',
+        owner: getMerchantName(anomaly),
+        time: formatDateTime(anomaly.detectedAt || anomaly.createdAt)
+    }))
 
-    if (rows.length === 0) {
-        return [
-            {
-                id: 'empty',
-                type: 'No recent activity',
-                module: 'Dashboard',
-                status: 'Empty',
-                owner: '-',
-                time: '-'
-            }
-        ]
-    }
-
-    return rows.slice(0, 5)
+    return [...exceptionRows, ...anomalyRows].slice(0, 6)
 }
 
-const getTopRiskAnomalies = (riskData = {}) => {
-    return riskData.topRiskAnomalies || []
-}
-
-const hasRole = (userRole, allowedRoles = []) => {
-    return allowedRoles.includes(userRole)
-}
-
-const getRoleDashboardCopy = (role) => {
-    if (role === 'admin') {
-        return {
-            title: 'System operations overview',
-            description:
-                'Monitor reconciliation volume, anomalies, exceptions, SLA health, users, and audit activity across the platform.'
-        }
-    }
-
-    if (role === 'supervisor') {
-        return {
-            title: 'Operations control dashboard',
-            description:
-                'Track reconciliation issues, assign exceptions, monitor SLA breaches, and review operational workload.'
-        }
-    }
-
-    return {
-        title: 'Assigned work dashboard',
-        description:
-            'Review assigned exceptions, related anomalies, SLA priority, and AI-supported investigation context.'
-    }
-}
-
-const getKpiCards = (role, overview = {}) => {
-    if (role === 'analyst') {
-        return [
-            {
-                label: 'Assigned exceptions',
-                value: getNumber(
-                    overview.exceptions?.open,
-                    overview.exceptions?.total
-                ),
-                detail: 'Your active queue',
-                icon: ListChecks
-            },
-            {
-                label: 'Due soon',
-                value: getNumber(overview.exceptions?.atRisk),
-                detail: 'SLA at risk',
-                icon: Clock3
-            },
-            {
-                label: 'Resolved',
-                value: getNumber(overview.exceptions?.resolved),
-                detail: 'Completed cases',
-                icon: CheckCircle2
-            },
-            {
-                label: 'High-risk anomalies',
-                value: getNumber(overview.anomalies?.highRisk),
-                detail: 'Needs investigation support',
-                icon: Bot
-            }
-        ]
-    }
-
+const getKpiCards = (overview = {}) => {
     return [
         {
-            label: 'Total transactions',
+            label: 'Transactions',
             value: getNumber(overview.transactions?.total),
-            detail: 'Across selected scope',
+            helper: 'Total records',
             icon: Database
         },
         {
-            label: 'Open anomalies',
-            value: getNumber(overview.anomalies?.open),
-            detail: 'Require review',
+            label: 'Matched',
+            value:
+                getNumber(overview.transactions?.matched) +
+                getNumber(overview.transactions?.fuzzy),
+            helper: 'Cleared records',
+            icon: CheckCircle2
+        },
+        {
+            label: 'Anomalies',
+            value: getNumber(overview.anomalies?.total),
+            helper: `${getNumber(overview.anomalies?.open)} open`,
             icon: AlertTriangle
         },
         {
-            label: 'Open exceptions',
-            value: getNumber(overview.exceptions?.open),
-            detail: 'Active investigation queue',
+            label: 'Exceptions',
+            value: getNumber(overview.exceptions?.total),
+            helper: `${getNumber(overview.exceptions?.open)} open`,
             icon: ListChecks
         },
         {
             label: 'SLA breached',
             value: getNumber(overview.exceptions?.breached),
-            detail: 'Needs immediate action',
+            helper: 'Needs attention',
             icon: Clock3
         }
     ]
 }
 
-const getReconciliationHealth = (overview = {}) => {
-    return {
-        matched: getNumber(
-            overview.transactions?.matched,
-            overview.transactions?.fuzzy
-        ),
-        fuzzy: getNumber(overview.transactions?.fuzzy),
-        unmatched: getNumber(overview.transactions?.unmatched),
-        exceptions: getNumber(overview.exceptions?.total)
+const ReconciliationCard = ({ overview = {}, sourceSplit = {} }) => {
+    const matched = getNumber(overview.transactions?.matched)
+    const fuzzy = getNumber(overview.transactions?.fuzzy)
+    const unmatched = getNumber(overview.transactions?.unmatched)
+    const unprocessed = getNumber(overview.transactions?.unprocessed)
+
+    const total = matched + fuzzy + unmatched + unprocessed
+
+    const matchedPercent = total ? ((matched + fuzzy) / total) * 100 : 0
+    const unmatchedPercent = total ? (unmatched / total) * 100 : 0
+    const unprocessedPercent = total ? (unprocessed / total) * 100 : 0
+
+    const matchedEnd = matchedPercent
+    const unmatchedEnd = matchedEnd + unmatchedPercent
+    const unprocessedEnd = unmatchedEnd + unprocessedPercent
+
+    const donutStyle = {
+        background: `conic-gradient(
+            #22c55e 0% ${matchedEnd}%,
+            #f97316 ${matchedEnd}% ${unmatchedEnd}%,
+            #94a3b8 ${unmatchedEnd}% ${unprocessedEnd}%,
+            var(--bg-muted) ${unprocessedEnd}% 100%
+        )`
     }
+
+    return (
+        <article className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-4">
+                <h2 className="text-base font-semibold">
+                    Reconciliation split
+                </h2>
+
+                <span className="rounded-full bg-[var(--bg-muted)] px-3 py-1 text-xs text-[var(--text-muted)]">
+                    {total} records
+                </span>
+            </div>
+
+            <div className="mt-5 grid gap-5 md:grid-cols-[150px_1fr] md:items-center">
+                <div
+                    className="relative mx-auto flex h-[136px] w-[136px] items-center justify-center rounded-full"
+                    style={donutStyle}
+                >
+                    <div className="flex h-[88px] w-[88px] flex-col items-center justify-center rounded-full bg-[var(--bg-surface)] shadow-sm">
+                        <p className="text-2xl font-semibold">
+                            {matched + fuzzy}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                            Cleared
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid gap-2">
+                    {[
+                        ['Matched', matched],
+                        ['Fuzzy', fuzzy],
+                        ['Unmatched', unmatched],
+                        ['Unprocessed', unprocessed]
+                    ].map(([label, value]) => (
+                        <div
+                            key={label}
+                            className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] px-3 py-2"
+                        >
+                            <span className="text-sm text-[var(--text-muted)]">
+                                {label}
+                            </span>
+                            <span className="text-sm font-semibold">
+                                {value}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-2">
+                <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] px-3 py-3">
+                    <span className="text-sm text-[var(--text-muted)]">
+                        Bank
+                    </span>
+                    <span className="text-sm font-semibold">
+                        {getNumber(sourceSplit.bank)}
+                    </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] px-3 py-3">
+                    <span className="text-sm text-[var(--text-muted)]">
+                        POS
+                    </span>
+                    <span className="text-sm font-semibold">
+                        {getNumber(sourceSplit.pos)}
+                    </span>
+                </div>
+            </div>
+        </article>
+    )
 }
 
-const workQueueRows = [
-    {
-        item: 'No active work items',
-        priority: 'Neutral',
-        sla: '-',
-        status: 'Empty'
-    }
-]
+const OpsKpiPanel = ({ overview = {} }) => {
+    const rows = [
+        {
+            label: 'Open anomalies',
+            value: getNumber(overview.anomalies?.open)
+        },
+        {
+            label: 'High risk anomalies',
+            value: getNumber(overview.anomalies?.highRisk)
+        },
+        {
+            label: 'Open exceptions',
+            value: getNumber(overview.exceptions?.open)
+        },
+        {
+            label: 'At-risk exceptions',
+            value: getNumber(overview.exceptions?.atRisk)
+        },
+        {
+            label: 'Resolved exceptions',
+            value: getNumber(overview.exceptions?.resolved)
+        }
+    ]
+
+    return (
+        <article className="relative overflow-hidden rounded-[28px] border border-emerald-400/15 bg-[linear-gradient(135deg,rgba(6,78,59,0.92),rgba(2,6,23,0.98)_38%,rgba(15,23,42,0.96))] p-5 text-white shadow-xl shadow-slate-950/20 backdrop-blur">
+            <div className="pointer-events-none absolute -right-12 top-8 h-36 w-36 rounded-full bg-emerald-400/10 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-14 left-10 h-32 w-32 rounded-full bg-violet-500/15 blur-3xl" />
+
+            <div className="relative">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-base font-semibold">Operations KPIs</h2>
+                    <span className="text-xs text-slate-300">Live</span>
+                </div>
+
+                <div className="mt-5 divide-y divide-white/10">
+                    {rows.map((row) => (
+                        <div
+                            key={row.label}
+                            className="flex items-center justify-between py-3"
+                        >
+                            <span className="text-sm text-slate-300">
+                                {row.label}
+                            </span>
+                            <span className="text-sm font-semibold">
+                                {row.value}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </article>
+    )
+}
+
+const AnalystDashboard = () => {
+    const navigate = useNavigate()
+
+    return (
+        <AppLayout
+            pageTitle="Dashboard"
+            pageSubtitle="Analyst workspace"
+        >
+            <section className="grid gap-4 md:grid-cols-3">
+                <button
+                    type="button"
+                    onClick={() => navigate('/exceptions')}
+                    className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-6 text-left shadow-sm transition hover:bg-[var(--bg-muted)]"
+                >
+                    <p className="text-sm text-[var(--text-muted)]">
+                        Work queue
+                    </p>
+                    <p className="mt-3 text-xl font-semibold">
+                        Open exceptions
+                    </p>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => navigate('/transactions')}
+                    className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-6 text-left shadow-sm transition hover:bg-[var(--bg-muted)]"
+                >
+                    <p className="text-sm text-[var(--text-muted)]">
+                        Records
+                    </p>
+                    <p className="mt-3 text-xl font-semibold">
+                        Transactions
+                    </p>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => navigate('/anomalies')}
+                    className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-6 text-left shadow-sm transition hover:bg-[var(--bg-muted)]"
+                >
+                    <p className="text-sm text-[var(--text-muted)]">
+                        Investigation
+                    </p>
+                    <p className="mt-3 text-xl font-semibold">
+                        Anomalies
+                    </p>
+                </button>
+            </section>
+        </AppLayout>
+    )
+}
 
 const DashboardPage = () => {
     const { user } = useAuth()
 
+    const role = user?.role || 'analyst'
+    const canUseOperationsDashboard = hasRole(role, ['admin', 'supervisor'])
+
+    const [sessions, setSessions] = useState([])
+    const [selectedSessionId, setSelectedSessionId] = useState('')
+
     const [overview, setOverview] = useState({})
-    const [isOverviewLoading, setIsOverviewLoading] = useState(true)
-    const [overviewError, setOverviewError] = useState('')
     const [metricsData, setMetricsData] = useState({})
     const [riskData, setRiskData] = useState({})
     const [slaData, setSlaData] = useState({})
     const [recentData, setRecentData] = useState({})
-    const [isDashboardDetailsLoading, setIsDashboardDetailsLoading] = useState(false)
-    const [dashboardDetailsError, setDashboardDetailsError] = useState('')
-    const [sessions, setSessions] = useState([])
-    const [selectedSessionId, setSelectedSessionId] = useState('')
-    const [isSessionsLoading, setIsSessionsLoading] = useState(true)
-    const [sessionsError, setSessionsError] = useState('')
-    const [hasLoadedSessions, setHasLoadedSessions] = useState(false)
 
-    const role = user?.role || 'analyst'
-    const canAccessDashboardApis = hasRole(role, ['admin', 'supervisor'])
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState('')
+
+    const kpiCards = useMemo(() => getKpiCards(overview), [overview])
+    const recentRows = useMemo(
+        () => getRecentActivityRows(recentData),
+        [recentData]
+    )
 
     useEffect(() => {
-        const fetchSessions = async () => {
-            if (!canAccessDashboardApis) {
-                setSessions([])
-                setSelectedSessionId('')
-                setSessionsError('')
-                setIsSessionsLoading(false)
-                setHasLoadedSessions(true)
-                return
-            }
+        if (!canUseOperationsDashboard) {
+            setIsLoading(false)
+            return
+        }
 
+        const fetchSessions = async () => {
             try {
-                setHasLoadedSessions(false)
-                setIsSessionsLoading(true)
-                setSessionsError('')
+                setError('')
 
                 const response = await getTransactionSessions()
-                const fetchedSessions = getSessionsFromResponse(response)
-
-                setSessions(fetchedSessions)
-
-                if (fetchedSessions.length > 0) {
-                    setSelectedSessionId(fetchedSessions[0].sessionId)
-                }
-            } catch (error) {
+                setSessions(getSessionsFromResponse(response))
+            } catch (sessionError) {
                 setSessions([])
-                setSelectedSessionId('')
-                setSessionsError(
-                    error.message || 'Failed to load reconciliation sessions'
-                )
-            } finally {
-                setIsSessionsLoading(false)
-                setHasLoadedSessions(true)
+                setError(sessionError.message || 'Failed to load sessions')
             }
         }
 
         fetchSessions()
-    }, [canAccessDashboardApis])
+    }, [canUseOperationsDashboard])
 
     useEffect(() => {
-        const fetchDashboardOverview = async () => {
-            if (!canAccessDashboardApis) {
-                setOverview({})
-                setOverviewError('')
-                setIsOverviewLoading(false)
-                return
-            }
-
-            if (!hasLoadedSessions) {
-                return
-            }
-
-            try {
-                setIsOverviewLoading(true)
-                setOverviewError('')
-
-                const response = await getDashboardOverview(selectedSessionId)
-                const dashboardOverview = getResponseData(response)
-
-                setOverview(dashboardOverview)
-            } catch (error) {
-                setOverviewError(error.message || 'Failed to load dashboard overview')
-                setOverview({})
-            } finally {
-                setIsOverviewLoading(false)
-            }
+        if (!canUseOperationsDashboard) {
+            return
         }
 
-        fetchDashboardOverview()
-    }, [canAccessDashboardApis, hasLoadedSessions, selectedSessionId])
-
-    useEffect(() => {
-        const fetchDashboardDetails = async () => {
-            if (!canAccessDashboardApis) {
-                setMetricsData({})
-                setRiskData({})
-                setSlaData({})
-                setRecentData({})
-                setDashboardDetailsError('')
-                setIsDashboardDetailsLoading(false)
-                return
-            }
-
-            if (!hasLoadedSessions) {
-                return
-            }
-
+        const fetchDashboard = async () => {
             try {
-                setIsDashboardDetailsLoading(true)
-                setDashboardDetailsError('')
+                setIsLoading(true)
+                setError('')
 
                 const [
+                    overviewResponse,
                     metricsResponse,
                     riskResponse,
                     slaResponse,
                     recentResponse
                 ] = await Promise.all([
+                    getDashboardOverview(selectedSessionId),
                     getDashboardMetrics(selectedSessionId),
                     getDashboardRisk(selectedSessionId),
                     getDashboardSla(selectedSessionId),
                     getDashboardRecent({
                         sessionId: selectedSessionId,
-                        limit: 5
+                        limit: 6
                     })
                 ])
 
-                setMetricsData(getResponseData(metricsResponse))
-                setRiskData(getResponseData(riskResponse))
-                setSlaData(getResponseData(slaResponse))
-                setRecentData(getResponseData(recentResponse))
-            } catch (error) {
+                setOverview(overviewResponse?.data || {})
+                setMetricsData(metricsResponse?.data || {})
+                setRiskData(riskResponse?.data || {})
+                setSlaData(slaResponse?.data || {})
+                setRecentData(recentResponse?.data || {})
+            } catch (dashboardError) {
+                setOverview({})
                 setMetricsData({})
                 setRiskData({})
                 setSlaData({})
                 setRecentData({})
-                setDashboardDetailsError(
-                    error.message || 'Failed to load dashboard details'
-                )
+                setError(dashboardError.message || 'Failed to load dashboard')
             } finally {
-                setIsDashboardDetailsLoading(false)
+                setIsLoading(false)
             }
         }
 
-        fetchDashboardDetails()
-    }, [canAccessDashboardApis, hasLoadedSessions, selectedSessionId])
+        fetchDashboard()
+    }, [canUseOperationsDashboard, selectedSessionId])
 
-    const dashboardCopy = getRoleDashboardCopy(role)
-    const kpiCards = getKpiCards(role, overview)
-    const reconciliationHealth = getReconciliationHealth(overview)
-    const slaOverviewRows = getSlaRows(slaData)
-    const riskOverviewRows = getRiskRows(riskData)
-    const recentActivityRows = getRecentActivityRows(recentData)
-    const topRiskAnomalies = getTopRiskAnomalies(riskData)
-    const metricGroups = getMetricGroups(metricsData)
-    const selectedSession = sessions.find(
-        (session) => session.sessionId === selectedSessionId
-    )
+    if (!canUseOperationsDashboard) {
+        return <AnalystDashboard />
+    }
 
     return (
         <AppLayout
             pageTitle="Dashboard"
-            pageSubtitle={
-                role === 'analyst'
-                    ? 'Analyst workspace'
-                    : 'Operations overview'
-            }
+            pageSubtitle="Operations"
         >
-            <section className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-                <div>
-                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-1 text-xs text-[var(--text-muted)]">
-                        <ShieldCheck size={13} />
-                        <span className="capitalize">{role} access</span>
-                    </div>
+            <section className="mb-5 flex justify-end">
+                <select
+                    value={selectedSessionId}
+                    onChange={(event) => setSelectedSessionId(event.target.value)}
+                    className="rc-input h-10 w-full rounded-full px-4 text-sm sm:w-[320px]"
+                >
+                    <option value="">All sessions</option>
 
-                    <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-                        {dashboardCopy.title}
-                    </h1>
-
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
-                        {dashboardCopy.description}
-                    </p>
-
-                    {selectedSessionId && (
-                        <div className="mt-2 max-w-3xl text-xs text-[var(--text-muted)]">
-                            <p>
-                                Viewing: {selectedSession ? getSessionDisplayName(selectedSession) : selectedSessionId}
-                            </p>
-                            <p className="mt-1 break-all">
-                                Session ID: {selectedSessionId}
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                    <select
-                        value={selectedSessionId}
-                        onChange={(event) => setSelectedSessionId(event.target.value)}
-                        disabled={!canAccessDashboardApis || isSessionsLoading}
-                        className="rc-input h-10 min-w-[280px] px-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                        <option value="">
-                            {isSessionsLoading ? 'Loading sessions...' : 'All sessions'}
+                    {sessions.map((session) => (
+                        <option key={session.sessionId} value={session.sessionId}>
+                            {getSessionDisplayName(session)}
                         </option>
-
-                        {sessions.map((session) => (
-                            <option key={session.sessionId} value={session.sessionId}>
-                                {getSessionDisplayName(session)}
-                            </option>
-                        ))}
-                    </select>
-
-                    {hasRole(role, ['admin', 'supervisor']) && (
-                        <button
-                            type="button"
-                            className="rc-btn-primary h-10 min-w-[160px] whitespace-nowrap px-4 text-sm"
-                        >
-                            Run SLA check
-                        </button>
-                    )}
-                </div>
+                    ))}
+                </select>
             </section>
 
-            {sessionsError && (
-                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
-                    {sessionsError}
+            {error && (
+                <div className="mb-5 rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                    {error}
                 </div>
             )}
 
-            {isDashboardDetailsLoading && (
-                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
-                    Loading dashboard risk, SLA, and recent activity...
-                </div>
-            )}
-
-            {dashboardDetailsError && (
-                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
-                    {dashboardDetailsError}
-                </div>
-            )}
-
-            {isOverviewLoading && (
-                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
-                    Loading dashboard overview...
-                </div>
-            )}
-
-            {overviewError && (
-                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
-                    {overviewError}
-                </div>
-            )}
-
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {kpiCards.map((card) => {
-                    const Icon = card.icon
-
-                    return (
-                        <article key={card.label} className="rc-card p-5">
-                            <div className="mb-5 flex items-center justify-between">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-muted)]">
-                                    <Icon size={17} />
-                                </div>
-
-                                <span className="rc-badge rc-badge-muted">
-                                    Live
-                                </span>
-                            </div>
-
-                            <p className="text-sm text-[var(--text-muted)]">
-                                {card.label}
-                            </p>
-
-                            <p className="mt-3 text-3xl font-semibold tracking-tight">
-                                {card.value}
-                            </p>
-
-                            <p className="mt-2 text-xs text-[var(--text-muted)]">
-                                {card.detail}
-                            </p>
-                        </article>
-                    )
-                })}
-            </section>
-
-            <section className="mt-5 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                <article className="rc-card overflow-hidden">
-                    <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] p-5">
-                        <div>
+            {isLoading ? (
+                <section className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-5">
+                    <LoadingState
+                        title="Loading dashboard"
+                        message="Fetching reconciliation metrics."
+                    />
+                </section>
+            ) : (
+                <>
+                    <section className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-sm">
+                        <div className="mb-4 flex items-center justify-between">
                             <h2 className="text-base font-semibold">
-                                Reconciliation health
+                                Statistics
                             </h2>
-                            <p className="mt-1 text-sm text-[var(--text-muted)]">
-                                Summary of matching quality and operational exceptions.
-                            </p>
                         </div>
 
-                        <GitCompareArrows
-                            size={20}
-                            className="text-[var(--text-muted)]"
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                            {kpiCards.map((card) => (
+                                <KpiCard
+                                    key={card.label}
+                                    label={card.label}
+                                    value={card.value}
+                                    helper={card.helper}
+                                    icon={card.icon}
+                                />
+                            ))}
+                        </div>
+                    </section>
+
+                    <section className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_0.9fr_0.85fr]">
+                        <ReconciliationCard
+                            overview={overview}
+                            sourceSplit={metricsData.transactionsBySource}
                         />
-                    </div>
 
-                    <div className="grid gap-4 p-5 md:grid-cols-3">
-                        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] p-4">
-                            <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                                Matched
-                            </p>
-                            <p className="mt-3 text-2xl font-semibold">
-                                {reconciliationHealth.matched}
-                            </p>
-                            <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                Exact and fuzzy matches
-                            </p>
-                        </div>
+                        <SlaSummary slaData={slaData} />
 
-                        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] p-4">
-                            <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                                Mismatches
-                            </p>
-                            <p className="mt-3 text-2xl font-semibold">
-                                {reconciliationHealth.unmatched}
-                            </p>
-                            <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                Amount or time issues
-                            </p>
-                        </div>
+                        <OpsKpiPanel overview={overview} />
+                    </section>
 
-                        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] p-4">
-                            <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                                Exceptions
-                            </p>
-                            <p className="mt-3 text-2xl font-semibold">
-                                {reconciliationHealth.exceptions}
-                            </p>
-                            <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                Generated for review
-                            </p>
-                        </div>
-                    </div>
-                </article>
+                    <section className="mt-5 grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+                        <RiskSummary riskData={riskData} overview={overview} />
 
-                <article className="rc-card overflow-hidden">
-                    <div className="border-b border-[var(--border)] p-5">
-                        <h2 className="text-base font-semibold">SLA health</h2>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">
-                            Current state of active exceptions.
-                        </p>
-                    </div>
-
-                    <div className="grid gap-3 p-5">
-                        {slaOverviewRows.map((row) => (
-                            <div
-                                key={row.label}
-                                className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] px-3 py-3"
-                            >
-                                <span className="text-sm">{row.label}</span>
-                                <span className="text-sm font-semibold">
-                                    {row.value}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </article>
-            </section>
-
-            <section className="mt-5">
-                <article className="rc-card overflow-hidden">
-                    <div className="border-b border-[var(--border)] p-5">
-                        <h2 className="text-base font-semibold">
-                            Metrics breakdown
-                        </h2>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">
-                            Distribution of transactions, anomalies, and exceptions for the selected scope.
-                        </p>
-                    </div>
-
-                    <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
-                        {metricGroups.map((group) => (
-                            <div
-                                key={group.title}
-                                className="rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] p-4"
-                            >
-                                <h3 className="text-sm font-semibold">
-                                    {group.title}
-                                </h3>
-
-                                <div className="mt-4 grid gap-3">
-                                    {group.rows.map((row) => (
-                                        <div
-                                            key={`${group.title}-${row.label}`}
-                                            className="flex items-center justify-between gap-3"
-                                        >
-                                            <span className="text-sm text-[var(--text-muted)]">
-                                                {row.label}
-                                            </span>
-                                            <span className="text-sm font-semibold">
-                                                {row.value}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </article>
-            </section>
-
-            <section className="mt-5 grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-                <article className="rc-card overflow-hidden">
-                    <div className="border-b border-[var(--border)] p-5">
-                        <h2 className="text-base font-semibold">
-                            Risk overview
-                        </h2>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">
-                            Anomaly distribution by risk priority.
-                        </p>
-                    </div>
-
-                    <div className="divide-y divide-[var(--border)]">
-                        {riskOverviewRows.map((row) => (
-                            <div
-                                key={row.label}
-                                className="flex items-center justify-between gap-4 p-5"
-                            >
-                                <div>
-                                    <p className="text-sm font-medium">
-                                        {row.label}
-                                    </p>
-                                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                        {row.note}
-                                    </p>
-                                </div>
-
-                                <span className="text-lg font-semibold">
-                                    {row.value}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="border-t border-[var(--border)] p-5">
-                        <h3 className="text-sm font-semibold">
-                            Top risk anomalies
-                        </h3>
-
-                        <div className="mt-4 grid gap-3">
-                            {topRiskAnomalies.length === 0 ? (
-                                <p className="text-sm text-[var(--text-muted)]">
-                                    No top risk anomalies found.
-                                </p>
-                            ) : (
-                                topRiskAnomalies.slice(0, 3).map((anomaly) => (
-                                    <div
-                                        key={anomaly._id}
-                                        className="rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] p-3"
-                                    >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <p className="text-sm font-medium capitalize">
-                                                    {anomaly.type || 'Anomaly'}
-                                                </p>
-                                                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                                                    {getMerchantName(anomaly)}
-                                                </p>
-                                            </div>
-
-                                            <span className="rc-badge rc-badge-strong">
-                                                Risk {anomaly.riskScore ?? 0}
-                                            </span>
-                                        </div>
-
-                                        <p className="mt-2 text-xs capitalize text-[var(--text-muted)]">
-                                            Status: {anomaly.status || '-'}
-                                        </p>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                </article>
-
-                <article className="rc-card overflow-hidden">
-                    <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] p-5">
-                        <div>
-                            <h2 className="text-base font-semibold">
-                                Recent activity
-                            </h2>
-                            <p className="mt-1 text-sm text-[var(--text-muted)]">
-                                Latest reconciliation and workflow updates.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="rc-table">
-                            <thead>
-                                <tr>
-                                    <th>Activity</th>
-                                    <th>Module</th>
-                                    <th>Status</th>
-                                    <th>Owner</th>
-                                    <th>Time</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {recentActivityRows.map((row) => (
-                                    <tr key={row.id}>
-                                        <td className="text-sm">{row.type}</td>
-                                        <td className="text-sm text-[var(--text-muted)]">
-                                            {row.module}
-                                        </td>
-                                        <td>
-                                            <span className="rc-badge rc-badge-muted">
-                                                {row.status}
-                                            </span>
-                                        </td>
-                                        <td className="text-sm text-[var(--text-muted)]">
-                                            {row.owner}
-                                        </td>
-                                        <td className="text-sm text-[var(--text-muted)]">
-                                            {row.time}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </article>
-            </section>
-
-            <section className="mt-5 grid gap-4 xl:grid-cols-[1fr_380px]">
-                <article className="rc-card overflow-hidden">
-                    <div className="border-b border-[var(--border)] p-5">
-                        <h2 className="text-base font-semibold">
-                            {role === 'analyst'
-                                ? 'Your work queue'
-                                : 'Exception work queue'}
-                        </h2>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">
-                            {role === 'analyst'
-                                ? 'Assigned exceptions and investigation priorities.'
-                                : 'Open and escalated exceptions requiring ownership.'}
-                        </p>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="rc-table">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Priority</th>
-                                    <th>SLA</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {workQueueRows.map((row) => (
-                                    <tr key={row.item}>
-                                        <td className="text-sm">{row.item}</td>
-                                        <td>
-                                            <span className="rc-badge rc-badge-muted">
-                                                {row.priority}
-                                            </span>
-                                        </td>
-                                        <td className="text-sm text-[var(--text-muted)]">
-                                            {row.sla}
-                                        </td>
-                                        <td>
-                                            <span className="rc-badge rc-badge-muted">
-                                                {row.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </article>
-
-                <aside className="rc-card p-5">
-                    <h2 className="text-base font-semibold">Quick actions</h2>
-                    <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        Actions available for your role.
-                    </p>
-
-                    <div className="mt-5 grid gap-3">
-                        {hasRole(role, ['admin', 'supervisor']) && (
-                            <>
-                                <button
-                                    type="button"
-                                    className="rc-btn-secondary h-10 w-full px-4 text-sm"
-                                >
-                                    Upload reconciliation batch
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="rc-btn-secondary h-10 w-full px-4 text-sm"
-                                >
-                                    Assign open exceptions
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="rc-btn-secondary h-10 w-full px-4 text-sm"
-                                >
-                                    Review SLA breaches
-                                </button>
-                            </>
-                        )}
-
-                        {role === 'analyst' && (
-                            <>
-                                <button
-                                    type="button"
-                                    className="rc-btn-secondary h-10 w-full px-4 text-sm"
-                                >
-                                    View assigned exceptions
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="rc-btn-secondary h-10 w-full px-4 text-sm"
-                                >
-                                    Open anomaly insights
-                                </button>
-                            </>
-                        )}
-
-                        {role === 'admin' && (
-                            <button
-                                type="button"
-                                className="rc-btn-secondary h-10 w-full px-4 text-sm"
-                            >
-                                Manage users
-                            </button>
-                        )}
-                    </div>
-                </aside>
-            </section>
+                        <RecentActivity rows={recentRows} />
+                    </section>
+                </>
+            )}
         </AppLayout>
     )
 }
