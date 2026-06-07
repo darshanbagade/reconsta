@@ -69,42 +69,37 @@ const formatLabel = (value = '') => {
 }
 
 const getRiskBadgeClass = (riskLevel) => {
-    const classes = {
-        critical:
-            'border-red-500/30 bg-red-950/10 text-red-700 dark:bg-red-500/12 dark:text-red-300',
-        high: 'border-orange-500/30 bg-orange-950/10 text-orange-700 dark:bg-orange-500/12 dark:text-orange-300',
-        medium:
-            'border-amber-500/30 bg-amber-950/10 text-amber-700 dark:bg-amber-500/12 dark:text-amber-300',
-        low: 'border-emerald-500/30 bg-emerald-950/10 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300'
-    }
+const baseBadge =
+  "inline-flex min-w-[112px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm";
 
+const classes = {
+  critical:
+    `${baseBadge} border-red-700 bg-red-600 text-white dark:border-red-500 dark:bg-red-500/90`,
+
+  high:
+    `${baseBadge} border-amber-700 bg-amber-600 text-white dark:border-amber-500 dark:bg-amber-500/90`,
+
+  medium:
+    `${baseBadge} border-violet-700 bg-violet-600 text-white dark:border-violet-500 dark:bg-violet-500/90`,
+
+  low:
+    `${baseBadge} border-teal-700 bg-teal-600 text-white dark:border-teal-500 dark:bg-teal-500/90`,
+};
     return classes[riskLevel] || classes.low
 }
 
-const getRiskDotClass = (riskLevel) => {
-    const classes = {
-        critical: 'bg-red-500',
-        high: 'bg-orange-500',
-        medium: 'bg-amber-500',
-        low: 'bg-emerald-500'
-    }
-
-    return classes[riskLevel] || classes.low
+const getRiskDotClass = () => {
+    return 'bg-white/80'
 }
 
 const getStatusBadgeClass = (status) => {
-    const classes = {
-        open: 'border-orange-500/30 bg-orange-950/10 text-orange-700 dark:bg-orange-500/12 dark:text-orange-300',
-        in_review:
-            'border-blue-500/30 bg-blue-950/10 text-blue-700 dark:bg-blue-500/12 dark:text-blue-300',
-        resolved:
-            'border-emerald-500/30 bg-emerald-950/10 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300'
-    }
+const classes = {
+  open: 'border-slate-700 bg-slate-600/90 text-white dark:border-slate-500 dark:bg-slate-600/85',
+  in_review: 'border-indigo-700 bg-indigo-600/90 text-white dark:border-indigo-500 dark:bg-indigo-600/85',
+  resolved: 'border-teal-700 bg-teal-600/90 text-white dark:border-teal-500 dark:bg-teal-600/85'
+}
 
-    return (
-        classes[status] ||
-        'border-[var(--border)] bg-[var(--bg-muted)] text-[var(--text-muted)]'
-    )
+    return classes[status] || 'border-slate-600 bg-slate-600/85 text-white'
 }
 
 const RiskBadge = ({ riskScore }) => {
@@ -117,9 +112,7 @@ const RiskBadge = ({ riskScore }) => {
             )}`}
         >
             <span
-                className={`h-2 w-2 shrink-0 rounded-full ${getRiskDotClass(
-                    riskLevel
-                )}`}
+                className={`h-2 w-2 shrink-0 rounded-full ${getRiskDotClass()}`}
             />
             {riskScore ?? 0} · {riskLevel}
         </span>
@@ -163,7 +156,8 @@ const AnomalyTable = ({
                         {pagination.totalAnomalies || 0} records
                     </p>
                 </div>
-
+                <div>
+                    
                 <select
                     value={limit}
                     onChange={(event) => onLimitChange(Number(event.target.value))}
@@ -173,6 +167,7 @@ const AnomalyTable = ({
                     <option value={20}>20 rows</option>
                     <option value={50}>50 rows</option>
                 </select>
+                </div>
             </div>
 
             <div className="overflow-x-auto">
