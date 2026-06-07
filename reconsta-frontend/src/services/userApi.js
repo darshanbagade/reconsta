@@ -59,8 +59,8 @@ const updateUserRole = async ({ userId, role }) => {
 }
 
 export {
-    getUsers,
     createUser,
-    updateUserStatus,
-    updateUserRole
+    getUsers,
+    updateUserRole,
+    updateUserStatus
 }
