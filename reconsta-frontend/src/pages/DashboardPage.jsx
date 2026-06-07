@@ -451,7 +451,7 @@ const DashboardPage = () => {
     return (
         <AppLayout
             pageTitle="Dashboard"
-            pageSubtitle="Operations"
+            pageSubtitle=""
         >
             <section className="mb-5 flex justify-end">
                 <select
