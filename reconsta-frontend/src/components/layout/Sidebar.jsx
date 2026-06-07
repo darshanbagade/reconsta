@@ -83,7 +83,7 @@ const AppLogo = ({ isCollapsed = false }) => {
     return (
         <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] text-sm font-semibold">
-                R
+                <img src="../../assesets/brand/reconsta-logo.p" alt="" />
             </div>
 
             <div
@@ -94,9 +94,6 @@ const AppLogo = ({ isCollapsed = false }) => {
                 }`}
             >
                 <p className="truncate text-sm font-semibold">Reconsta</p>
-                <p className="truncate text-xs text-[var(--text-muted)]">
-                    Operations
-                </p>
             </div>
         </div>
     )
@@ -112,9 +109,6 @@ const MobileHeader = ({ onClose }) => {
 
                 <div>
                     <p className="text-sm font-semibold">Reconsta</p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                        Operations
-                    </p>
                 </div>
             </div>
 
