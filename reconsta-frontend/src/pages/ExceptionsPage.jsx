@@ -289,6 +289,7 @@ const ExceptionsPage = () => {
                         className="rc-input h-10 px-3 text-sm"
                     >
                         <option value="">All priorities</option>
+                        <option value="critical">Critical</option>
                         <option value="high">High</option>
                         <option value="medium">Medium</option>
                         <option value="low">Low</option>
