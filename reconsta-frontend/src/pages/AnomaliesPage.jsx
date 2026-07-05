@@ -41,7 +41,7 @@ const getTxnId = (anomaly) => {
 }
 
 const getRiskLevel = (riskScore = 0) => {
-    if (riskScore >= 85) {
+    if (riskScore >= 90) {
         return 'critical'
     }
 
