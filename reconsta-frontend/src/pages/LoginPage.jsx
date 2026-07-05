@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import reconstaLogo from '../assets/brand/reconsta-logo.png'
 import ThemeToggle from '../components/ThemeToggle.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useTheme } from '../context/ThemeContext.jsx'
 
 const LoginPage = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const { login, isAuthenticated, isCheckingAuth } = useAuth()
+    const { isDark } = useTheme()
 
     const [formData, setFormData] = useState({
         email: '',
@@ -69,15 +72,21 @@ const LoginPage = () => {
     return (
         <main className="relative flex min-h-screen items-center justify-center bg-[var(--bg-main)] px-5 py-24 text-[var(--text-main)]">
             <header className="absolute left-0 right-0 top-0">
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
-                    <Link to="/" className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm font-semibold shadow-sm shadow-black/10">
-                            R
-                        </div>
+                <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
+                    <Link to="/" className="flex items-center gap-0">
+                        <img
+                            src={reconstaLogo}
+                            alt="Reconsta"
+                            className="h-14 w-14 object-contain"
+                        />
 
-                        <div>
-                            <p className="text-sm font-semibold">Reconsta</p>
-                        </div>
+                        <span
+                            className={`text-2xl font-extrabold tracking-tight ${
+                                isDark ? 'text-white' : 'text-black'
+                            }`}
+                        >
+                            Reconsta
+                        </span>
                     </Link>
 
                     <ThemeToggle />
