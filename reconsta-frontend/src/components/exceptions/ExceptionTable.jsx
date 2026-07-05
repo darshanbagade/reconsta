@@ -40,12 +40,13 @@ const getBadgeClass = (type, value = '') => {
 
     if (type === 'priority') {
         const classes = {
+            critical: 'border-red-700 bg-red-600/80 text-white',
             high: 'border-orange-600 bg-orange-600/75 text-white',
             medium: 'border-blue-700 bg-blue-700/75 text-white',
             low: 'border-emerald-700 bg-emerald-700/75 text-white'
         }
 
-        return classes[normalizedValue] || classes.medium
+        return classes[normalizedValue] || classes.low
     }
 
     if (type === 'sla') {
