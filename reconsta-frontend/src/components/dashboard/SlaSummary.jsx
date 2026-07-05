@@ -90,7 +90,7 @@ const RiskSummary = ({ riskData = {} }) => {
                 </div>
             </div>
 
-            <div className="mt-5 border-t border-[var(--border)] pt-4">
+            {/* <div className="mt-5 border-t border-[var(--border)] pt-4">
                 <h3 className="text-sm font-semibold">Top risk</h3>
 
                 <div className="mt-3 grid gap-2">
@@ -120,7 +120,7 @@ const RiskSummary = ({ riskData = {} }) => {
                         ))
                     )}
                 </div>
-            </div>
+            </div> */}
         </article>
     )
 }
