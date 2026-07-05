@@ -1,14 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-    CalendarClock,
-    Database,
-    Search,
-    Trash2,
-    UploadCloud
-} from 'lucide-react'
+import { Search, Trash2, UploadCloud } from 'lucide-react'
 import AppLayout from '../layouts/AppLayout.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import LoadingState from '../components/LoadingState.jsx'
 import {
     deleteTransactionSession,
     getTransactionSessions
@@ -47,15 +42,26 @@ const normalizeText = (value = '') => {
     return String(value).toLowerCase().trim()
 }
 
-const SummaryCard = ({ label, value, detail }) => {
+const SummaryCard = ({ label, value }) => {
     return (
-        <article className="rc-card p-5">
+        <article className="rounded-[24px] border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-sm shadow-black/10 ring-1 ring-white/10">
             <p className="text-sm text-[var(--text-muted)]">{label}</p>
             <p className="mt-3 text-3xl font-semibold tracking-tight">
                 {value}
             </p>
-            <p className="mt-2 text-xs text-[var(--text-muted)]">{detail}</p>
         </article>
+    )
+}
+
+const StatusMessage = ({ message }) => {
+    if (!message) {
+        return null
+    }
+
+    return (
+        <div className="mb-5 rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)] shadow-sm shadow-black/10 ring-1 ring-white/10">
+            {message}
+        </div>
     )
 }
 
@@ -138,12 +144,12 @@ const SessionManagementPage = () => {
 
     const handleDeleteSession = async (sessionId) => {
         if (!canDeleteSession) {
-            setError('Only admin can delete reconciliation sessions.')
+            setError('Only admin can delete sessions.')
             return
         }
 
         const confirmed = window.confirm(
-            `Delete this reconciliation session?\n\n${sessionId}\n\nThis will delete linked transactions, anomalies, and exceptions for this batch.`
+            `Delete this session?\n\n${sessionId}\n\nThis removes linked transactions, anomalies, and exceptions.`
         )
 
         if (!confirmed) {
@@ -165,7 +171,11 @@ const SessionManagementPage = () => {
             )
 
             setSuccessMessage(
-                `Session deleted successfully. Deleted ${deletedData.deletedTransactions || 0} transactions, ${deletedData.deletedAnomalies || 0} anomalies, and ${deletedData.deletedExceptions || 0} exceptions.`
+                `Deleted session. Transactions: ${
+                    deletedData.deletedTransactions || 0
+                } · Anomalies: ${
+                    deletedData.deletedAnomalies || 0
+                } · Exceptions: ${deletedData.deletedExceptions || 0}`
             )
         } catch (deleteError) {
             setError(deleteError.message || 'Failed to delete session')
@@ -178,12 +188,12 @@ const SessionManagementPage = () => {
         return (
             <AppLayout
                 pageTitle="Sessions"
-                pageSubtitle="Reconciliation batch management"
+                pageSubtitle="Batch management"
             >
-                <section className="rc-card p-6">
-                    <h1 className="text-xl font-semibold">Access restricted</h1>
+                <section className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-5 shadow-sm shadow-black/10 ring-1 ring-white/10">
+                    <h1 className="text-base font-semibold">Access restricted</h1>
                     <p className="mt-2 text-sm text-[var(--text-muted)]">
-                        Session management is available only for admin and supervisor accounts.
+                        Session management is available for admin and supervisor accounts.
                     </p>
                 </section>
             </AppLayout>
@@ -193,81 +203,28 @@ const SessionManagementPage = () => {
     return (
         <AppLayout
             pageTitle="Sessions"
-            pageSubtitle="Monitor uploaded reconciliation batches"
+            pageSubtitle="Batch management"
         >
-            <section className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-                <div>
-                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-1 text-xs text-[var(--text-muted)]">
-                        <Database size={13} />
-                        <span>Batch operations</span>
-                    </div>
-
-                    <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-                        Session management
-                    </h1>
-
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
-                        Review uploaded reconciliation batches, open related operational pages,
-                        and let admins remove demo/test sessions when cleanup is required.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => navigate('/upload')}
-                    className="rc-btn-primary h-10 px-4 text-sm"
-                >
-                    <UploadCloud size={16} />
-                    Upload new batch
-                </button>
-            </section>
-
-            {error && (
-                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
-                    {error}
-                </div>
-            )}
-
-            {successMessage && (
-                <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-muted)]">
-                    {successMessage}
-                </div>
-            )}
+            <StatusMessage message={error} />
+            <StatusMessage message={successMessage} />
 
             <section className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <SummaryCard
-                    label="Batches"
-                    value={summary.batches}
-                    detail="Shown reconciliation sessions"
-                />
+                <SummaryCard label="Batches" value={summary.batches} />
                 <SummaryCard
                     label="Transactions"
                     value={summary.totalTransactions}
-                    detail="Total uploaded records"
                 />
-                <SummaryCard
-                    label="Bank records"
-                    value={summary.bankTransactions}
-                    detail="Bank ledger rows"
-                />
-                <SummaryCard
-                    label="POS records"
-                    value={summary.posTransactions}
-                    detail="Merchant/POS rows"
-                />
+                <SummaryCard label="Bank records" value={summary.bankTransactions} />
+                <SummaryCard label="POS records" value={summary.posTransactions} />
             </section>
 
-            <section className="rc-card mb-5 p-5">
+            <section className="mb-5 rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-4 shadow-sm shadow-black/10 ring-1 ring-white/10">
                 <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-                    <div>
-                        <h2 className="text-base font-semibold">Find session</h2>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">
-                            Search by reconciliation session ID.
-                        </p>
-                    </div>
-
-                    <div className="flex h-10 w-full items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 md:max-w-md">
-                        <Search size={15} className="text-[var(--text-muted)]" />
+                    <div className="flex h-10 w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] px-3 md:max-w-md">
+                        <Search
+                            size={15}
+                            className="shrink-0 text-[var(--text-muted)]"
+                        />
                         <input
                             value={searchQuery}
                             onChange={(event) => setSearchQuery(event.target.value)}
@@ -275,20 +232,26 @@ const SessionManagementPage = () => {
                             className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
                         />
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate('/upload')}
+                        className="rc-btn-primary h-10 justify-center px-4 text-sm"
+                    >
+                        <UploadCloud size={16} />
+                        Upload batch
+                    </button>
                 </div>
             </section>
 
-            <section className="rc-card overflow-hidden">
-                <div className="flex flex-col justify-between gap-3 border-b border-[var(--border)] p-5 md:flex-row md:items-center">
+            <section className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] shadow-sm shadow-black/10 ring-1 ring-white/10">
+                <div className="flex flex-col justify-between gap-3 border-b border-[var(--border)] px-5 py-4 md:flex-row md:items-center">
                     <div>
-                        <div className="flex items-center gap-2">
-                            <CalendarClock size={16} />
-                            <h2 className="text-base font-semibold">
-                                Reconciliation sessions
-                            </h2>
-                        </div>
+                        <h2 className="text-base font-semibold">
+                            Reconciliation sessions
+                        </h2>
                         <p className="mt-1 text-sm text-[var(--text-muted)]">
-                            Showing {filteredSessions.length} of {sessions.length} sessions.
+                            {filteredSessions.length} records
                         </p>
                     </div>
                 </div>
@@ -310,18 +273,18 @@ const SessionManagementPage = () => {
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td
-                                        colSpan="7"
-                                        className="text-center text-sm text-[var(--text-muted)]"
-                                    >
-                                        Loading sessions...
+                                    <td colSpan="7">
+                                        <LoadingState
+                                            title="Loading sessions"
+                                            message="Fetching reconciliation batches."
+                                        />
                                     </td>
                                 </tr>
                             ) : filteredSessions.length === 0 ? (
                                 <tr>
                                     <td
                                         colSpan="7"
-                                        className="text-center text-sm text-[var(--text-muted)]"
+                                        className="py-8 text-center text-sm text-[var(--text-muted)]"
                                     >
                                         No sessions found.
                                     </td>
@@ -333,7 +296,7 @@ const SessionManagementPage = () => {
                                             <p className="text-sm font-medium">
                                                 {getShortSessionId(session.sessionId)}
                                             </p>
-                                            <p className="mt-1 break-all text-xs text-[var(--text-muted)]">
+                                            <p className="mt-1 max-w-[320px] truncate text-xs text-[var(--text-muted)]">
                                                 {session.sessionId}
                                             </p>
                                         </td>
@@ -342,7 +305,7 @@ const SessionManagementPage = () => {
                                             {formatDateTime(session.uploadedAt)}
                                         </td>
 
-                                        <td className="text-sm font-medium">
+                                        <td className="text-sm font-semibold">
                                             {session.totalTransactions || 0}
                                         </td>
 
@@ -359,21 +322,6 @@ const SessionManagementPage = () => {
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        navigate('/dashboard', {
-                                                            state: {
-                                                                sessionId:
-                                                                    session.sessionId
-                                                            }
-                                                        })
-                                                    }
-                                                    className="rc-btn-secondary h-9 px-3 text-sm"
-                                                >
-                                                    Dashboard
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
                                                         navigate('/transactions', {
                                                             state: {
                                                                 sessionId:
@@ -384,6 +332,21 @@ const SessionManagementPage = () => {
                                                     className="rc-btn-secondary h-9 px-3 text-sm"
                                                 >
                                                     Transactions
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        navigate('/anomalies', {
+                                                            state: {
+                                                                sessionId:
+                                                                    session.sessionId
+                                                            }
+                                                        })
+                                                    }
+                                                    className="rc-btn-secondary h-9 px-3 text-sm"
+                                                >
+                                                    Anomalies
                                                 </button>
                                             </div>
                                         </td>
@@ -401,13 +364,15 @@ const SessionManagementPage = () => {
                                                         deletingSessionId ===
                                                         session.sessionId
                                                     }
-                                                    className="rc-btn-secondary h-9 px-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                                                    className="h-9 rounded-xl border border-rose-700 bg-rose-700/85 px-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
                                                 >
-                                                    <Trash2 size={14} />
-                                                    {deletingSessionId ===
-                                                    session.sessionId
-                                                        ? 'Deleting...'
-                                                        : 'Delete'}
+                                                    <span className="inline-flex items-center gap-2">
+                                                        <Trash2 size={14} />
+                                                        {deletingSessionId ===
+                                                        session.sessionId
+                                                            ? 'Deleting'
+                                                            : 'Delete'}
+                                                    </span>
                                                 </button>
                                             ) : (
                                                 <span className="text-sm text-[var(--text-muted)]">

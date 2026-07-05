@@ -51,7 +51,7 @@ const getBucketsFromRiskData = (riskData = {}, overview = {}) => {
         topRiskAnomalies.forEach((anomaly) => {
             const score = getNumber(anomaly.riskScore)
 
-            if (score >= 85) {
+            if (score >= 90) {
                 critical += 1
             } else if (score >= 70) {
                 high += 1

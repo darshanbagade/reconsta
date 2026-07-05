@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { LockKeyhole } from 'lucide-react'
+import reconstaLogo from '../assets/brand/reconsta-logo.png'
 import ThemeToggle from '../components/ThemeToggle.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useTheme } from '../context/ThemeContext.jsx'
 
 const LoginPage = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const { login, isAuthenticated, isCheckingAuth } = useAuth()
+    const { isDark } = useTheme()
 
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     })
+
     const [error, setError] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -35,7 +38,7 @@ const LoginPage = () => {
         event.preventDefault()
 
         if (!formData.email || !formData.password) {
-            setError('Email and password are required')
+            setError('Email and password are required.')
             return
         }
 
@@ -67,128 +70,100 @@ const LoginPage = () => {
     }
 
     return (
-        <main className="flex min-h-screen bg-[var(--bg-main)] text-[var(--text-main)]">
-            <section className="hidden min-h-screen w-[42%] border-r border-[var(--border)] p-10 lg:flex lg:flex-col lg:justify-between">
-                <Link to="/" className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-sm font-semibold">
-                        R
-                    </div>
-                    <div>
-                        <p className="text-sm font-semibold">Reconsta</p>
-                        <p className="text-xs text-[var(--text-muted)]">
-                            Reconciliation Intelligence
-                        </p>
-                    </div>
-                </Link>
+        <main className="relative flex min-h-screen items-center justify-center bg-[var(--bg-main)] px-5 py-24 text-[var(--text-main)]">
+            <header className="absolute left-0 right-0 top-0">
+                <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
+                    <Link to="/" className="flex items-center gap-0">
+                        <img
+                            src={reconstaLogo}
+                            alt="Reconsta"
+                            className="h-14 w-14 object-contain"
+                        />
 
-                <div>
-                    <p className="max-w-md text-3xl font-semibold tracking-tight">
-                        Secure access for reconciliation operations teams.
-                    </p>
-                    <p className="mt-4 max-w-md text-sm leading-6 text-[var(--text-muted)]">
-                        Monitor reconciliation batches, exceptions, SLA breaches,
-                        audit history, and AI-supported investigation workflows.
-                    </p>
+                        <span
+                            className={`text-2xl font-extrabold tracking-tight ${
+                                isDark ? 'text-white' : 'text-black'
+                            }`}
+                        >
+                            Reconsta
+                        </span>
+                    </Link>
+
+                    <ThemeToggle />
                 </div>
+            </header>
 
-                <p className="text-xs text-[var(--text-muted)]">
-                    Internal banking operations access only.
-                </p>
-            </section>
-
-            <section className="flex flex-1 items-center justify-center px-5 py-8">
-                <div className="w-full max-w-md">
-                    <div className="mb-6 flex items-center justify-between">
-                        <Link to="/" className="flex items-center gap-3 lg:hidden">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] text-sm font-semibold">
-                                R
-                            </div>
-                            <div>
-                                <p className="text-sm font-semibold">Reconsta</p>
-                                <p className="text-xs text-[var(--text-muted)]">
-                                    Reconciliation Intelligence
-                                </p>
-                            </div>
-                        </Link>
-
-                        <div className="ml-auto">
-                            <ThemeToggle />
-                        </div>
-                    </div>
-
-                    <div className="rc-card p-6">
-                        <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-muted)]">
-                            <LockKeyhole size={18} />
-                        </div>
-
+            <section className="w-full max-w-md">
+                <div className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-surface)] p-6 shadow-sm shadow-black/10 ring-1 ring-white/10">
+                    <div className="mb-6">
                         <h1 className="text-2xl font-semibold tracking-tight">
-                            Login to Reconsta
+                            Login
                         </h1>
+
                         <p className="mt-2 text-sm text-[var(--text-muted)]">
-                            Use your internal account credentials.
+                            Use your internal Reconsta account.
                         </p>
-
-                        {error && (
-                            <div className="mt-5 rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] px-3 py-2 text-sm">
-                                {error}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleLoginSubmit} className="mt-6 grid gap-4">
-                            <div>
-                                <label
-                                    htmlFor="email"
-                                    className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
-                                >
-                                    Email
-                                </label>
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    className="rc-input h-11 px-3 text-sm"
-                                    placeholder="analyst@reconsta.com"
-                                    autoComplete="email"
-                                />
-                            </div>
-
-                            <div>
-                                <label
-                                    htmlFor="password"
-                                    className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
-                                >
-                                    Password
-                                </label>
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    className="rc-input h-11 px-3 text-sm"
-                                    placeholder="Enter password"
-                                    autoComplete="current-password"
-                                />
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="rc-btn-primary h-11 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                                {isSubmitting ? 'Signing in...' : 'Continue'}
-                            </button>
-                        </form>
-
-                        <div className="mt-5 border-t border-[var(--border)] pt-5">
-                            <p className="text-xs leading-5 text-[var(--text-muted)]">
-                                Access is restricted to authorized admin, supervisor,
-                                and analyst users.
-                            </p>
-                        </div>
                     </div>
+
+                    {error && (
+                        <div className="mb-5 rounded-2xl border border-[var(--border)] bg-[var(--bg-muted)] px-4 py-3 text-sm text-[var(--text-muted)]">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleLoginSubmit} className="grid gap-4">
+                        <div>
+                            <label
+                                htmlFor="email"
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                Email
+                            </label>
+
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                className="rc-input h-11 w-full px-3 text-sm"
+                                placeholder="analyst@reconsta.com"
+                                autoComplete="email"
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="password"
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                Password
+                            </label>
+
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                className="rc-input h-11 w-full px-3 text-sm"
+                                placeholder="Enter password"
+                                autoComplete="current-password"
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="rc-btn-primary mt-2 h-11 justify-center px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                            {isSubmitting ? 'Signing in...' : 'Continue'}
+                        </button>
+                    </form>
+
+                    <p className="mt-5 border-t border-[var(--border)] pt-5 text-xs text-[var(--text-muted)]">
+                        Authorized access only.
+                    </p>
                 </div>
             </section>
         </main>

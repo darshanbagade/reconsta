@@ -11,6 +11,7 @@ import {
     Users,
     X
 } from 'lucide-react'
+import reconstaLogo from '../../assets/brand/reconsta-logo.png'
 
 const hasRole = (userRole, allowedRoles = []) => {
     return allowedRoles.includes(userRole)
@@ -81,10 +82,15 @@ const getNavLinkClass = ({ isActive }) => {
 
 const AppLogo = ({ isCollapsed = false }) => {
     return (
-        <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] text-sm font-semibold">
-                R
-            </div>
+        <NavLink
+        to={'/'}
+        >
+            <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-5">
+            <img
+                src={reconstaLogo}
+                alt="Reconsta"
+                className="h-9 w-9 shrink-0 object-contain"
+            />
 
             <div
                 className={`min-w-0 overflow-hidden transition-all duration-300 ease-in-out ${
@@ -94,11 +100,9 @@ const AppLogo = ({ isCollapsed = false }) => {
                 }`}
             >
                 <p className="truncate text-sm font-semibold">Reconsta</p>
-                <p className="truncate text-xs text-[var(--text-muted)]">
-                    Operations
-                </p>
             </div>
         </div>
+        </NavLink>
     )
 }
 
@@ -106,15 +110,14 @@ const MobileHeader = ({ onClose }) => {
     return (
         <div className="flex h-16 items-center justify-between border-b border-[var(--border)] px-5">
             <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] text-sm font-semibold">
-                    R
-                </div>
+                <img
+                    src={reconstaLogo}
+                    alt="Reconsta"
+                    className="h-9 w-9 object-contain"
+                />
 
                 <div>
                     <p className="text-sm font-semibold">Reconsta</p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                        Operations
-                    </p>
                 </div>
             </div>
 
