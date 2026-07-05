@@ -27,6 +27,10 @@ const getSessionsFromResponse = (response) => {
     return response?.data?.sessions || []
 }
 
+const getResponseData = (response) => {
+    return response?.data?.data || response?.data || response || {}
+}
+
 const getNumber = (value) => {
     return typeof value === 'number' && !Number.isNaN(value) ? value : 0
 }
@@ -424,11 +428,11 @@ const DashboardPage = () => {
                     })
                 ])
 
-                setOverview(overviewResponse?.data || {})
-                setMetricsData(metricsResponse?.data || {})
-                setRiskData(riskResponse?.data || {})
-                setSlaData(slaResponse?.data || {})
-                setRecentData(recentResponse?.data || {})
+                setOverview(getResponseData(overviewResponse))
+                setMetricsData(getResponseData(metricsResponse))
+                setRiskData(getResponseData(riskResponse))
+                setSlaData(getResponseData(slaResponse))
+                setRecentData(getResponseData(recentResponse))
             } catch (dashboardError) {
                 setOverview({})
                 setMetricsData({})
@@ -504,13 +508,13 @@ const DashboardPage = () => {
                         </div>
                     </section>
 
-                    <section className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_0.9fr_0.85fr]">
+                    <section className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
                         <ReconciliationCard
                             overview={overview}
                             sourceSplit={metricsData.transactionsBySource}
                         />
 
-                        <SlaSummary slaData={slaData} />
+                        {/* <SlaSummary slaData={slaData} /> */}
 
                         <OpsKpiPanel overview={overview} />
                     </section>
