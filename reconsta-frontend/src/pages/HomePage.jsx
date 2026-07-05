@@ -192,9 +192,11 @@ const HomePage = () => {
 
                                 <Link
                                     to="/login"
-                                    className="mt-10 inline-flex w-fit rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90"
+                                    className="mt-10 inline-flex w-fit rounded-xl text-black bg-white px-5 py-2.5 text-sm font-semibold  hover:bg-white/90 "
                                 >
-                                    Open Reconsta
+                                    <span
+                                    className='text-black'
+                                    >Open Reconsta</span>
                                 </Link>
                             </div>
                         </article>
