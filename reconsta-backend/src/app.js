@@ -19,7 +19,7 @@ const app = express();
 app.use(
     cors({
         origin:env.CLIENT_URL,
-        credentials : true //allow to send the response like cookies
+        credentials : true //allow to get the creadentials to backend and send the response like cookies from backend
     })
 )
 
