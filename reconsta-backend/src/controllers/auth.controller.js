@@ -126,11 +126,11 @@ const login = async (req, res, next) => {
             isActive : user.isActive
         }
 
-         //cookies can be modifed by anyone on front end.
-        //option eanble, cookies can be only modified from server
+        // Cookies configuration for cross-domain production environment
         const options = {
             httpOnly : true,
-            secure: env.NODE_ENV === 'production'
+            secure: env.NODE_ENV === 'production',
+            sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax'
         }
 
         res.cookie('accessToken', accessToken, options)
@@ -196,7 +196,8 @@ const refreshAccessToken = async (req, res, next) => {
 
         const options = {
             httpOnly: true,
-            secure: env.NODE_ENV === 'production'
+            secure: env.NODE_ENV === 'production',
+            sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax'
         }
 
         res.cookie('accessToken', accessToken, options)
@@ -226,7 +227,8 @@ const logout = async (req, res, next) => {
 
         const options = {
             httpOnly: true,
-            secure: env.NODE_ENV === 'production'
+            secure: env.NODE_ENV === 'production',
+            sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax'
         }
 
         res.clearCookie('accessToken', options)
