@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
     register,
     login,
+    demoLogin,
     getMe,
     logout,
     refreshAccessToken
@@ -12,6 +13,7 @@ import authorizeRoles from '../middleware/role.middleware.js'
 const authRouter = Router()
 
 authRouter.post('/login', login)
+authRouter.post('/demo-login', demoLogin)
 authRouter.post('/refresh-token', refreshAccessToken)
 
 authRouter.get('/me', verifyJWT, getMe)

@@ -21,8 +21,15 @@ const logoutUser = async () => {
     return response.data
 }
 
+const demoLogin = async () => {
+    const response = await apiClient.post('/api/auth/demo-login')
+
+    return response.data
+}
+
 export {
     loginUser,
     getCurrentUser,
     logoutUser
+    , demoLogin
 }
