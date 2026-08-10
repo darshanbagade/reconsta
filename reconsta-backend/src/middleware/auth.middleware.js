@@ -36,6 +36,11 @@ const verifyJWT = async (req, res, next) =>{
         }
 
         req.user = user
+        // Block demo users from performing any non-read operations.
+        // Demo users may view data (GET) but are not allowed to modify.
+        if (user.role === 'demo' && req.method !== 'GET') {
+            throw new ApiError(403, 'Demo account: You are not allowed to perform any action/operation')
+        }
         next();
 
     } catch (error) {

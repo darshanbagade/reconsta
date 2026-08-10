@@ -111,6 +111,7 @@ const AppLayout = ({
                     onToggleDesktopSidebar={() =>
                         setIsDesktopSidebarCollapsed((currentValue) => !currentValue)
                     }
+                    user={user}
                 />
 
                     <div

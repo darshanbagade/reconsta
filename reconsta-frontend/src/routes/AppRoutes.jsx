@@ -13,8 +13,8 @@ import UserManagementPage from '../pages/UserManagementPage.jsx'
 import SessionManagementPage from '../pages/SessionManagementPage.jsx'
 import AuditLogsPage from '../pages/AuditLogsPage.jsx'
 
-const ALL_ROLES = ['admin', 'supervisor', 'analyst']
-const OPS_ROLES = ['admin', 'supervisor']
+const ALL_ROLES = ['admin', 'supervisor', 'analyst', 'demo']
+const OPS_ROLES = ['admin', 'supervisor', 'demo']
 
 const AppRoutes = () => {
     return (

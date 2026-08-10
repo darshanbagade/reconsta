@@ -2,13 +2,11 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import reconstaLogo from '../assets/brand/reconsta-logo.png'
 import { useAuth } from '../context/AuthContext.jsx'
-import { useTheme } from '../context/ThemeContext.jsx'
 
 const LoginPage = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const { login, isAuthenticated, isCheckingAuth } = useAuth()
-    const { isDark } = useTheme()
 
     const [formData, setFormData] = useState({
         email: '',
@@ -98,11 +96,7 @@ const LoginPage = () => {
                             className="h-14 w-14 object-contain"
                         />
 
-                        <span
-                            className={`text-2xl font-extrabold tracking-tight ${
-                                isDark ? 'text-white' : 'text-black'
-                            }`}
-                        >
+                        <span className="text-2xl font-extrabold tracking-tight text-black">
                             Reconsta
                         </span>
                     </Link>

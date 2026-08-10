@@ -60,7 +60,7 @@ const UserManagementPage = () => {
     const { user } = useAuth()
 
     const currentRole = user?.role || 'analyst'
-    const canViewUsers = ['admin', 'supervisor'].includes(currentRole)
+    const canViewUsers = ['admin', 'supervisor', 'demo'].includes(currentRole)
     const canManageUsers = currentRole === 'admin'
 
     const [users, setUsers] = useState([])

@@ -257,7 +257,7 @@ const AuditLogsPage = () => {
     const { user } = useAuth()
 
     const currentRole = user?.role || 'analyst'
-    const canViewAuditLogs = ['admin', 'supervisor'].includes(currentRole)
+    const canViewAuditLogs = ['admin', 'supervisor', 'demo'].includes(currentRole)
 
     const [logs, setLogs] = useState([])
     const [pagination, setPagination] = useState({

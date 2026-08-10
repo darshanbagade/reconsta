@@ -19,6 +19,15 @@ apiClient.interceptors.response.use(
             window.dispatchEvent(new Event('reconsta:unauthorized'))
         }
 
+        // If backend blocks demo account actions, show a friendly popup
+        if (statusCode === 403) {
+            const serverMessage = error.response?.data?.message
+            if (serverMessage && serverMessage.startsWith('Demo account')) {
+                // small UX: show alert; components may also react to the rejection
+                window.alert(serverMessage)
+            }
+        }
+
         const message =
             error.response?.data?.message ||
             error.message ||

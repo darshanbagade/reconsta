@@ -70,7 +70,7 @@ const SessionManagementPage = () => {
     const { user } = useAuth()
 
     const currentRole = user?.role || 'analyst'
-    const canViewSessions = ['admin', 'supervisor'].includes(currentRole)
+    const canViewSessions = ['admin', 'supervisor', 'demo'].includes(currentRole)
     const canDeleteSession = currentRole === 'admin'
 
     const [sessions, setSessions] = useState([])
