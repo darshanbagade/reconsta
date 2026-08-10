@@ -4,6 +4,7 @@ import ApiError from '../utils/ApiError.js'
 import bcrypt from 'bcryptjs'
 import { env } from './../config/env.js'
 import jwt from 'jsonwebtoken'
+import rateLimit from 'express-rate-limit'
 
 const register = async (req, res, next) => {
     try {
@@ -246,4 +247,79 @@ export {
     getMe,
     logout,
     refreshAccessToken
+}
+
+export { demoLogin }
+
+// Simple demo-login handler: returns tokens for the demo user when enabled.
+// Rate-limited to avoid abuse.
+const demoLogin = async (req, res, next) => {
+    try {
+        if (!env.ENABLE_PUBLIC_DEMO) {
+            throw new ApiError(403, 'Demo login is disabled on this server')
+        }
+
+        // Basic per-IP rate limiting (6 requests per minute)
+        // Use express-rate-limit for robust handling
+        // We'll create a small limiter instance here and run it.
+        const limiter = rateLimit({
+            windowMs: 60 * 1000,
+            max: 6,
+            standardHeaders: true,
+            legacyHeaders: false
+        })
+
+        // Promisify limiter middleware usage
+        await new Promise((resolve, reject) => {
+            limiter(req, res, (err) => {
+                if (err) return reject(err)
+                resolve()
+            })
+        })
+
+        const demoEmail = env.SEED_DEMO_EMAIL
+
+        if (!demoEmail) {
+            throw new ApiError(500, 'Demo user not configured on server')
+        }
+
+        const user = await User.findOne({ email: demoEmail }).select('+password')
+
+        if (!user) {
+            throw new ApiError(500, 'Demo user not found')
+        }
+
+        if (!user.isActive) {
+            throw new ApiError(403, 'Demo account is inactive')
+        }
+
+        const accessToken = generateAccessToken(user)
+        const refreshToken = generateRefreshToken(user)
+
+        user.refreshToken = refreshToken
+        await user.save({ validateBeforeSave: false })
+
+        const safeUser = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isActive: user.isActive
+        }
+
+        const options = {
+            httpOnly: true,
+            secure: env.NODE_ENV === 'production',
+            sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax'
+        }
+
+        res.cookie('accessToken', accessToken, options)
+        res.cookie('refreshToken', refreshToken, options)
+
+        return sendSuccess(res, 200, 'Demo login successful', {
+            user: safeUser
+        })
+    } catch (error) {
+        next(error)
+    }
 }

@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import reconstaLogo from '../assets/brand/reconsta-logo.png'
 import { useAuth } from '../context/AuthContext.jsx'
+import { demoLogin } from '../services/authApi.js'
 
 const LoginPage = () => {
     const navigate = useNavigate()
     const location = useLocation()
-    const { login, isAuthenticated, isCheckingAuth } = useAuth()
+    const { login, isAuthenticated, isCheckingAuth, refreshUser } = useAuth()
 
     const [formData, setFormData] = useState({
         email: '',
@@ -62,6 +63,32 @@ const LoginPage = () => {
         }
     }
 
+    const handleDemoLogin = async () => {
+        try {
+            setIsSubmitting(true)
+            setError('')
+
+            const response = await demoLogin()
+
+            if (!response?.success) {
+                throw new Error(response?.message || 'Demo login failed')
+            }
+
+            // refresh user from server (cookies were set by demo-login)
+            const currentUser = await refreshUser()
+
+            if (!currentUser) {
+                throw new Error('Demo login failed to establish session')
+            }
+
+            navigate(redirectPath, { replace: true })
+        } catch (err) {
+            setError(err.message || 'Demo login failed')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     if (!isCheckingAuth && isAuthenticated) {
         return <Navigate to="/dashboard" replace />
     }
@@ -96,7 +123,7 @@ const LoginPage = () => {
                             className="h-14 w-14 object-contain"
                         />
 
-                        <span className="text-2xl font-extrabold tracking-tight text-black">
+                        <span className="text-2xl font-extrabold tracking-tight text-white">
                             Reconsta
                         </span>
                     </Link>
@@ -178,6 +205,14 @@ const LoginPage = () => {
                             className="rc-btn-primary mt-2 h-11 justify-center px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70"
                         >
                             {isSubmitting ? 'Signing in...' : 'Continue'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleDemoLogin}
+                            disabled={isSubmitting}
+                            className="rc-btn-secondary mt-2 h-10 justify-center px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                            Try demo account
                         </button>
                     </form>
 
