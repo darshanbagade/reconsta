@@ -23,49 +23,49 @@ const getNavigationItems = (role) => {
             label: 'Dashboard',
             path: '/dashboard',
             icon: LayoutDashboard,
-            roles: ['admin', 'supervisor', 'analyst']
+            roles: ['admin', 'supervisor', 'analyst', 'demo']
         },
         {
             label: 'Upload Batch',
             path: '/upload',
             icon: Upload,
-            roles: ['admin', 'supervisor']
+            roles: ['admin', 'supervisor', 'demo']
         },
         {
             label: 'Transactions',
             path: '/transactions',
             icon: Database,
-            roles: ['admin', 'supervisor', 'analyst']
+            roles: ['admin', 'supervisor', 'analyst', 'demo']
         },
         {
             label: 'Anomalies',
             path: '/anomalies',
             icon: AlertTriangle,
-            roles: ['admin', 'supervisor', 'analyst']
+            roles: ['admin', 'supervisor', 'analyst', 'demo']
         },
         {
             label: 'Exceptions',
             path: '/exceptions',
             icon: ListChecks,
-            roles: ['admin', 'supervisor', 'analyst']
+            roles: ['admin', 'supervisor', 'analyst', 'demo']
         },
         {
             label: 'Sessions',
             path: '/sessions',
             icon: CalendarClock,
-            roles: ['admin', 'supervisor']
+            roles: ['admin', 'supervisor', 'demo']
         },
         {
             label: 'Audit Logs',
             path: '/audit-logs',
             icon: FileText,
-            roles: ['admin', 'supervisor']
+            roles: ['admin', 'supervisor', 'demo']
         },
         {
             label: 'User Management',
             path: '/users',
             icon: Users,
-            roles: ['admin', 'supervisor']
+            roles: ['admin', 'supervisor', 'demo']
         }
     ]
 

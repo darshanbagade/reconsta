@@ -360,7 +360,7 @@ const DashboardPage = () => {
     const { user } = useAuth()
 
     const role = user?.role || 'analyst'
-    const canUseOperationsDashboard = hasRole(role, ['admin', 'supervisor'])
+    const canUseOperationsDashboard = hasRole(role, ['admin', 'supervisor', 'demo'])
 
     const [sessions, setSessions] = useState([])
     const [selectedSessionId, setSelectedSessionId] = useState('')

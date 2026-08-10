@@ -25,7 +25,7 @@ const userSchema = mongoose.Schema({
     },
     role:{
         type : String,
-        enum : ["analyst","supervisor","admin"],
+        enum : ["analyst","supervisor","admin","demo"],
         default: "analyst"
     },
     //admin will manage which user is active/blocked(if leave the company)

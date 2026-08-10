@@ -13,6 +13,7 @@ const Topbar = ({
     isDesktopSidebarCollapsed = false,
     onOpenMobileSidebar,
     onToggleDesktopSidebar
+    , user
 }) => {
     const ToggleIcon = isMobileViewport
         ? Menu
@@ -61,6 +62,9 @@ const Topbar = ({
             </div>
 
             <div className="flex items-center gap-3">
+                {user?.role === 'demo' && (
+                    <span title="Demo account: read-only" className="rounded-md bg-yellow-500/10 px-3 py-1 text-xs font-medium text-yellow-300">Demo</span>
+                )}
                 <ThemeToggle />
             </div>
         </header>
