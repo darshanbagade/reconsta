@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: reconsta-backend
+    env: node
+    plan: free
+    buildCommand: |
+      cd reconsta-frontend && npm ci && npm run build
+      mkdir -p ../reconsta-backend/public
+      cp -r dist/* ../reconsta-backend/public/
+      cd ../reconsta-backend && npm ci --only=production
+    startCommand: cd reconsta-backend && node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
