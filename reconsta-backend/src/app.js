@@ -13,6 +13,9 @@ import reconciliationRouter from './routes/reconciliation.routes.js'
 import dashboardRouter from './routes/dashboard.routes.js'
 import insightRouter from './routes/insight.routes.js'
 import userRouter from './routes/user.routes.js';
+import path from 'path'
+import { fileURLToPath } from 'url'
+import fs from 'fs'
 
 const app = express();
 
@@ -52,6 +55,26 @@ app.use('/api/insights', insightRouter)
 app.use('/api/users/',userRouter)
 
 // errorHandler will be called if an error occurs in routes/controllers/middleware
+// Serve frontend SPA for any unknown GET route when a built client exists
+try {
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(__filename)
+    const clientDist = path.resolve(__dirname, '..', '..', 'reconsta-frontend', 'dist')
+
+    if (fs.existsSync(clientDist)) {
+        app.use(express.static(clientDist))
+
+        app.get('*', (req, res, next) => {
+            // Only handle GET requests that accept HTML
+            if (req.method !== 'GET' || !req.accepts('html')) return next()
+
+            res.sendFile(path.join(clientDist, 'index.html'))
+        })
+    }
+} catch (err) {
+    // ignore and continue
+}
+
 app.use(errorHandler);
 
 export default app;
