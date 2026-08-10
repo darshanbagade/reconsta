@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import React from 'react'
 import { Link } from 'react-router-dom'
 import {
   Upload,
@@ -9,9 +9,11 @@ import {
   ListChecks,
   ShieldCheck,
   ArrowRight,
-  ChevronDown,
   Mail,
 } from 'lucide-react'
+
+import reconstaLogo from '../assets/brand/reconsta-logo.png'
+import dashboardPreview from '../assets/home/dashboard-preview.png'
 
 
 
@@ -19,28 +21,6 @@ const displayFont = { fontFamily: "'Space Grotesk', ui-sans-serif, sans-serif" }
 const monoFont = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" }
 
 /* ---------- shared bits ---------- */
-
-function BrowserFrame({ children, url }) {
-  return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0F] shadow-2xl shadow-black/60">
-      <div className="flex shrink-0 items-center gap-2 border-b border-white/5 bg-white/[0.02] px-4 py-3">
-        <div className="flex gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
-          <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
-          <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
-        </div>
-        <div style={monoFont} className="ml-3 flex-1 truncate rounded-md bg-white/[0.04] px-3 py-1 text-[11px] text-white/35">
-          {url}
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 flex items-center justify-center overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center">
-          {children}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function AmbientBackground() {
   return (
@@ -67,12 +47,7 @@ function AmbientBackground() {
 
 /* ---------- data ---------- */
 
-const TOUR_STAGES = [
-  { id: 'transactions', index: '01', title: 'Transaction matching', image: transactionsPreview },
-  { id: 'anomalies', index: '02', title: 'Anomaly detection', image: anomalyPreview },
-  { id: 'exceptions', index: '03', title: 'Exception workflow', image: exceptionsPreview },
-  { id: 'users', index: '04', title: 'User management', image: userManagementPreview },
-]
+/* product tour removed */
 
 const WORKFLOW = [
   { step: '01', title: 'Upload CSV', text: 'Bank ledger and POS files land in one place.', icon: Upload },
@@ -90,91 +65,7 @@ const FEATURES = [
 
 const STACK = ['MongoDB', 'Express', 'React', 'Node.js', 'Socket.io \u00B7 realtime', 'Gemini API \u00B7 AI insights']
 
-/* ---------- product tour section (scroll-pinned, images crossfade in one by one) ---------- */
-
-function ProductTour() {
-  const [active, setActive] = useState(0)
-  const triggerRefs = useRef([])
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActive(Number(entry.target.dataset.index))
-        })
-      },
-      { threshold: 0, rootMargin: '-45% 0px -45% 0px' }
-    )
-    triggerRefs.current.forEach((el) => el && observer.observe(el))
-    return () => observer.disconnect()
-  }, [])
-
-  return (
-    <section id="tour" className="relative z-10 snap-y snap-mandatory scroll-smooth" style={{ height: `${TOUR_STAGES.length * 100}vh` }}>
-      {/* invisible 100vh trigger zones — one per stage, drive `active` as they cross viewport center */}
-      {TOUR_STAGES.map((stage, i) => (
-        <div
-          key={stage.id}
-          ref={(el) => (triggerRefs.current[i] = el)}
-          data-index={i}
-          className="absolute w-full snap-start"
-          style={{ top: `${i * 100}vh`, height: '100vh' }}
-        />
-      ))}
-
-      <div className="sticky top-0 flex h-screen items-center">
-      <div className="mx-auto grid w-full max-w-[1600px] gap-6 px-5 sm:px-8 md:grid-cols-[200px_70%] md:items-center md:gap-10 lg:grid-cols-[220px_60%]">
-          <div>
-            <p style={monoFont} className="text-[11px] uppercase tracking-[0.2em] text-white/40">
-              Product tour
-            </p>
-
-            <div className="mt-6 space-y-4 md:mt-8 md:space-y-5">
-              {TOUR_STAGES.map((stage, i) => (
-                <div key={stage.id} className="motion-safe:transition-opacity motion-safe:duration-500" style={{ opacity: active === i ? 1 : 0.32 }}>
-                  <div className="flex items-baseline gap-3">
-                    <span style={monoFont} className={`text-xs ${active === i ? 'text-violet-300' : 'text-white/30'}`}>
-                      {stage.index}
-                    </span>
-                    <h3 className={`text-base font-semibold sm:text-lg ${active === i ? 'text-white' : 'text-white/40'}`}>
-                      {stage.title}
-                    </h3>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative h-[360px] sm:h-[460px] md:h-[560px] lg:h-[640px]">
-            {TOUR_STAGES.map((stage, i) => (
-              <div
-                key={stage.id}
-                className="absolute inset-0 motion-safe:transition-all motion-safe:duration-700 motion-safe:ease-out"
-                style={{
-                  opacity: active === i ? 1 : 0,
-                  transform: active === i ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.97)',
-                  zIndex: active === i ? 10 : 0,
-                  pointerEvents: active === i ? 'auto' : 'none',
-                }}
-              >
-                <div className="w-full h-full hidden sm:flex items-center justify-center">
-                  <BrowserFrame url={`app.reconsta.io/${stage.id}`}>
-                    <div
-                      role="img"
-                      aria-label={stage.title}
-                      className="w-full h-full bg-center bg-no-repeat bg-cover"
-                      style={{ backgroundImage: `url(${stage.image})` }}
-                    />
-                  </BrowserFrame>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
+/* product tour removed: unused on the site for now */
 
 /* ---------- page ---------- */
 
@@ -248,9 +139,7 @@ const HomePage = () => {
             </div>
           </div>
 
-          <a href="#tour" className="mt-14 text-white/25 transition hover:text-white/50" aria-label="Scroll to product tour">
-            <ChevronDown className="h-5 w-5 motion-safe:animate-bounce" />
-          </a>
+          
         </section>
 
         {/* product tour (scroll-driven) */}
