@@ -59,20 +59,34 @@ app.use('/api/users/',userRouter)
 try {
     const __filename = fileURLToPath(import.meta.url)
     const __dirname = path.dirname(__filename)
-    const clientDist = path.resolve(__dirname, '..', '..', 'reconsta-frontend', 'dist')
 
-    if (fs.existsSync(clientDist)) {
+    const candidateDistDirs = [
+        path.resolve(__dirname, '..', '..', 'reconsta-frontend', 'dist'),
+        path.resolve(__dirname, '..', 'reconsta-frontend', 'dist'),
+        path.resolve(__dirname, '..', '..', '..', 'reconsta-frontend', 'dist'),
+        path.resolve(__dirname, 'public'),
+        path.resolve(process.cwd(), 'public'),
+        path.resolve(process.cwd(), 'reconsta-frontend', 'dist'),
+        path.resolve(process.cwd(), 'dist'),
+        path.resolve(process.cwd(), '..', 'reconsta-frontend', 'dist')
+    ]
+
+    const clientDist = candidateDistDirs.find((dir) => fs.existsSync(path.join(dir, 'index.html')))
+
+    if (clientDist) {
         app.use(express.static(clientDist))
 
-        app.get('*', (req, res, next) => {
-            // Only handle GET requests that accept HTML
+        app.get(/^\/(?!api\/).*/, (req, res, next) => {
+            // Only handle GET requests that accept HTML and are not API routes
             if (req.method !== 'GET' || !req.accepts('html')) return next()
 
             res.sendFile(path.join(clientDist, 'index.html'))
         })
+    } else {
+        console.warn('Frontend build not found; SPA fallback is disabled.')
     }
 } catch (err) {
-    // ignore and continue
+    console.warn('Unable to configure SPA fallback:', err.message)
 }
 
 app.use(errorHandler);
