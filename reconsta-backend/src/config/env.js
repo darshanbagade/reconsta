@@ -22,8 +22,7 @@ export const env = {
 
     SEED_ADMIN_NAME: process.env.SEED_ADMIN_NAME,
     SEED_ADMIN_EMAIL: process.env.SEED_ADMIN_EMAIL,
-    SEED_ADMIN_PASSWORD: process.env.SEED_ADMIN_PASSWORD
-    ,
+    SEED_ADMIN_PASSWORD: process.env.SEED_ADMIN_PASSWORD,
     SEED_DEMO_NAME: process.env.SEED_DEMO_NAME,
     SEED_DEMO_EMAIL: process.env.SEED_DEMO_EMAIL,
     SEED_DEMO_PASSWORD: process.env.SEED_DEMO_PASSWORD,
