@@ -13,15 +13,7 @@ import {
   Mail,
 } from 'lucide-react'
 
-import reconstaLogo from '../assets/brand/reconsta-logo.png'
-import dashboardPreview from '../assets/home/dashboard-preview.png'
-// Add these four screenshots to src/assets/home/ — same crop/aspect as
-// dashboard-preview.png (browser-window screenshot, no extra chrome needed,
-// the BrowserFrame component below adds the window chrome for you).
-import transactionsPreview from '../assets/home/transactions-preview.png'
-import anomalyPreview from '../assets/home/anomaly-preview.png'
-import exceptionsPreview from '../assets/home/exceptions-preview.png'
-import userManagementPreview from '../assets/home/user-management-preview.png'
+
 
 const displayFont = { fontFamily: "'Space Grotesk', ui-sans-serif, sans-serif" }
 const monoFont = { fontFamily: "'JetBrains Mono', ui-monospace, monospace" }
