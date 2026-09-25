@@ -286,8 +286,12 @@ const HomePage = () => {
               </div>
 
               <div className="space-y-2.5 md:text-right">
-                <a href="mailto:darshanbagade@gmail.com" className="flex items-center gap-1.5 transition hover:text-white md:justify-end">
-                  <Mail className="h-3.5 w-3.5" /> darshanbagade@gmail.com
+                <a href="mailto:darshanbagade123@gmail.com" className="flex items-center gap-1.5 transition hover:text-white md:justify-end">
+                  <Mail className="h-3.5 w-3.5" /> darshanbagade123@gmail.com
+                </a>
+                <a href="https://github.com/darshanbagade/reconsta" target="_blank" rel="noreferrer" className="flex items-center gap-1.5 transition hover:text-white md:justify-end">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/40">GitHub</span>
+                  <span>darshanbagade/reconsta</span>
                 </a>
                 <p style={monoFont} className="text-[11px] text-white/30">{'\u00A9'} 2026 Reconsta</p>
               </div>
