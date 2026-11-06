@@ -4,6 +4,22 @@ import reconstaLogo from '../assets/brand/reconsta-logo.png'
 import { useAuth } from '../context/AuthContext.jsx'
 import { demoLogin } from '../services/authApi.js'
 
+const loginThemeStyle = {
+    '--bg-main': '#030303',
+    '--bg-surface': '#0B0B0B',
+    '--bg-muted': '#121212',
+    '--border': '#262626',
+    '--border-hover': '#404040',
+    '--text-main': '#FAFAFA',
+    '--text-muted': '#A3A3A3',
+    '--button-primary-bg': '#FAFAFA',
+    '--button-primary-text': '#0A0A0A',
+    '--button-primary-hover': '#E5E5E5',
+    '--button-secondary-bg': 'transparent',
+    '--button-secondary-hover': '#121212',
+    '--focus-ring': 'rgba(250, 250, 250, 0.12)'
+}
+
 const LoginPage = () => {
     const navigate = useNavigate()
     const location = useLocation()
@@ -94,7 +110,10 @@ const LoginPage = () => {
     }
 
     return (
-        <main className="relative flex min-h-screen items-center justify-center bg-[var(--bg-main)] px-5 py-24 text-[var(--text-main)]">
+        <main
+            className="relative flex min-h-screen items-center justify-center bg-[var(--bg-main)] px-5 py-24 text-[var(--text-main)]"
+            style={loginThemeStyle}
+        >
             {/* Ambient background copied from HomePage to match home visuals */}
             <div className="fixed inset-0 z-0 overflow-hidden bg-[#050506]">
                 <div
