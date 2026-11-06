@@ -15,7 +15,7 @@ const dashboardRouter = Router()
 dashboardRouter.get(
     '/overview',
     verifyJWT,
-    authorizeRoles('admin', 'supervisor'),
+    authorizeRoles('admin', 'supervisor', 'demo'),
     getDashboardOverview
 )
 
@@ -23,7 +23,7 @@ dashboardRouter.get(
 dashboardRouter.get(
     '/metrics',
     verifyJWT,
-    authorizeRoles('admin', 'supervisor'),
+    authorizeRoles('admin', 'supervisor', 'demo'),
     getDashboardMetrics
 )
 
@@ -31,7 +31,7 @@ dashboardRouter.get(
 dashboardRouter.get(
     '/risk',
     verifyJWT,
-    authorizeRoles('admin', 'supervisor'),
+    authorizeRoles('admin', 'supervisor', 'demo'),
     getRiskDashboard
 )
 
@@ -39,7 +39,7 @@ dashboardRouter.get(
 dashboardRouter.get(
     '/recent',
     verifyJWT,
-    authorizeRoles('admin', 'supervisor'),
+    authorizeRoles('admin', 'supervisor', 'demo'),
     getRecentDashboardActivity
 )
 
@@ -47,7 +47,7 @@ dashboardRouter.get(
 dashboardRouter.get(
     '/sla',
     verifyJWT,
-    authorizeRoles('admin', 'supervisor'),
+    authorizeRoles('admin', 'supervisor', 'demo'),
     getSlaDashboard
 )
 
