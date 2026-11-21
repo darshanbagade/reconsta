@@ -9,7 +9,8 @@ import {
 import {
     getCurrentUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    demoLogin
 } from '../services/authApi'
 
 const AuthContext = createContext(null)
@@ -89,6 +90,22 @@ const AuthProvider = ({ children }) => {
         [refreshUser]
     )
 
+    const loginDemo = useCallback(async () => {
+        const response = await demoLogin()
+
+        if (!response?.success) {
+            throw new Error(response?.message || 'Demo login failed')
+        }
+
+        const currentUser = await refreshUser()
+
+        if (!currentUser) {
+            throw new Error('Demo login failed to establish session')
+        }
+
+        return currentUser
+    }, [refreshUser])
+
     const logout = useCallback(async () => {
         try {
             await logoutUser()
@@ -104,10 +121,11 @@ const AuthProvider = ({ children }) => {
             isAuthenticated: Boolean(user),
             isCheckingAuth,
             login,
+            loginDemo,
             logout,
             refreshUser
         }
-    }, [user, isCheckingAuth, login, logout, refreshUser])
+    }, [user, isCheckingAuth, login, loginDemo, logout, refreshUser])
 
     return (
         <AuthContext.Provider value={value}>

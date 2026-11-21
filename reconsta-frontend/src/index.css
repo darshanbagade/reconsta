@@ -176,6 +176,67 @@ a {
     border-color: var(--border-hover);
 }
 
+@property --demo-border-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+@keyframes demo-border-spin {
+    to {
+        --demo-border-angle: 360deg;
+    }
+}
+
+.demo-gradient-button {
+    display: inline-flex;
+    position: relative;
+    height: 40px;
+    overflow: hidden;
+    isolation: isolate;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 700;
+    box-shadow: none;
+}
+
+.demo-gradient-button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: conic-gradient(from var(--demo-border-angle), #A03DFE, #764FFF, #4278FF, #A03DFE);
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: demo-border-spin 2.5s linear infinite;
+    pointer-events: none;
+}
+
+.demo-gradient-button > span {
+    position: relative;
+    z-index: 1;
+}
+
+.demo-gradient-button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .demo-gradient-button::before {
+        animation: none;
+    }
+}
+
 /* Inputs */
 .rc-input {
     width: 100%;

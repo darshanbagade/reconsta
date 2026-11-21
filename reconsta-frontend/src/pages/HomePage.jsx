@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Upload,
   GitCompare,
@@ -14,6 +14,7 @@ import {
 
 import reconstaLogo from '../assets/brand/reconsta-logo.png'
 import dashboardPreview from '../assets/home/dashboard-preview.png'
+import { useAuth } from '../context/AuthContext.jsx'
 
 
 
@@ -70,10 +71,27 @@ const STACK = ['MongoDB', 'Express', 'React', 'Node.js', 'Socket.io \u00B7 realt
 /* ---------- page ---------- */
 
 const HomePage = () => {
+  const navigate = useNavigate()
+  const { loginDemo } = useAuth()
+  const [isDemoLoading, setIsDemoLoading] = useState(false)
+
+  const handleTryDemo = async () => {
+    try {
+      setIsDemoLoading(true)
+      await loginDemo()
+      navigate('/dashboard', { replace: true })
+    } catch (error) {
+      window.alert(error.message || 'Unable to open the demo account')
+    } finally {
+      setIsDemoLoading(false)
+    }
+  }
+
   return (
     <main className="relative min-h-screen text-white" style={{ fontFamily: "'Inter', ui-sans-serif, sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
       `}</style>
 
       <AmbientBackground />
@@ -89,12 +107,24 @@ const HomePage = () => {
               </span>
             </Link>
 
-            <Link
-              to="/login"
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 px-5 text-sm font-medium text-white/85 transition motion-safe:duration-200 hover:border-white/30 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
-            >
-              Login
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/15 px-3 text-sm font-medium text-white/85 transition sm:px-5 motion-safe:duration-200 hover:border-white/30 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60"
+              >
+                Login
+              </Link>
+              <button
+                type="button"
+                onClick={handleTryDemo}
+                disabled={isDemoLoading}
+                className="demo-gradient-button relative inline-flex h-10 items-center justify-center overflow-hidden rounded-xl px-3 text-sm font-bold text-white shadow-[0_10px_30px_rgba(118,79,255,0.38)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(118,79,255,0.52)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-5 motion-safe:duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+              >
+                <span className="relative">
+                  {isDemoLoading ? 'Opening...' : 'Try Demo'}
+                </span>
+              </button>
+            </div>
           </div>
         </header>
 
