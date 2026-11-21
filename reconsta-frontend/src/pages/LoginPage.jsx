@@ -158,7 +158,7 @@ const LoginPage = () => {
                         background: 'linear-gradient(180deg, rgba(0,0,0,0.48), rgba(0,0,0,0.48)), linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02))',
                         border: '1px solid rgba(255,255,255,0.26)',
                         backdropFilter: 'blur(8px) saturate(110%)',
-                        boxShadow: '0px 20px 60px rgba(66,120,255,0.18), 0 0 48px rgba(66,120,255,0.08)'
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.25)'
                     }}
                 >
                     <div className="mb-6">
@@ -229,9 +229,9 @@ const LoginPage = () => {
                             type="button"
                             onClick={handleDemoLogin}
                             disabled={isSubmitting}
-                            className="rc-btn-secondary mt-2 h-10 justify-center px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                            className="demo-gradient-button relative mt-2 inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm disabled:cursor-not-allowed disabled:opacity-70 motion-safe:duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
                         >
-                            Try demo account
+                            <span>Try demo account</span>
                         </button>
                     </form>
 
